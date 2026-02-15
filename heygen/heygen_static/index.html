@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HeyGen — Text to Video</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0c0f;
+      --surface: #16161a;
+      --border: #2a2a2e;
+      --text: #f0f0f2;
+      --muted: #888;
+      --accent: #7c3aed;
+      --accent-hover: #8b5cf6;
+      --error: #f43f5e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.4rem; font-weight: 600; margin: 0 0 0.25rem 0; }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: vertical;
+    }
+    textarea::placeholder { color: var(--muted); }
+    .btn {
+      width: 100%;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.85rem 1.25rem;
+      margin-top: 1rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: background 0.2s;
+    }
+    .btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    .error-msg {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid var(--error);
+      border-radius: 10px;
+      color: var(--error);
+      font-size: 0.9rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+    .status { margin-top: 1rem; font-size: 0.9rem; color: var(--muted); display: none; }
+    .status.visible { display: block; }
+    .video-wrap {
+      margin-top: 1rem;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      display: none;
+    }
+    .video-wrap.visible { display: block; }
+    .video-wrap video { width: 100%; display: block; }
+    .script-box {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: none;
+    }
+    .script-box.visible { display: block; }
+    .script-box label { margin-bottom: 0.35rem; color: var(--muted); font-size: 0.8rem; }
+    .script-box pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Prompt → Script → Video</h1>
+    <p class="subtitle">Enter a topic or idea. Perplexity writes a ~30s script, then your avatar speaks it.</p>
+
+    <label for="prompt">What should the avatar talk about?</label>
+    <textarea
+      id="prompt"
+      placeholder="e.g. Introduce our new AI-powered fitness app and highlight the three key features..."
+      autofocus
+    ></textarea>
+
+    <button type="button" class="btn" id="btn">Generate video</button>
+    <p class="status" id="status"></p>
+    <p class="error-msg" id="error"></p>
+    <div class="script-box" id="scriptBox">
+      <label>Generated script</label>
+      <pre id="scriptText"></pre>
+    </div>
+    <div class="video-wrap" id="videoWrap">
+      <video id="videoEl" controls playsinline></video>
+    </div>
+  </div>
+
+  <script>
+    const promptEl = document.getElementById('prompt');
+    const btn = document.getElementById('btn');
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+    const scriptBox = document.getElementById('scriptBox');
+    const scriptText = document.getElementById('scriptText');
+    const videoWrap = document.getElementById('videoWrap');
+    const videoEl = document.getElementById('videoEl');
+
+    function showError(msg) {
+      errorEl.textContent = msg || '';
+      errorEl.classList.toggle('visible', !!msg);
+    }
+    function showStatus(msg, visible) {
+      statusEl.textContent = msg || '';
+      statusEl.classList.toggle('visible', !!visible);
+    }
+
+    btn.addEventListener('click', async () => {
+      const prompt = promptEl.value.trim();
+      showError('');
+      showStatus('', false);
+      videoWrap.classList.remove('visible');
+      scriptBox.classList.remove('visible');
+      if (!prompt) {
+        showError('Please enter what the avatar should talk about.');
+        return;
+      }
+
+      btn.disabled = true;
+      showStatus('Writing script with Perplexity…', true);
+
+      try {
+        const res = await fetch('/api/video/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showError(data.error || res.statusText || 'Something went wrong');
+          btn.disabled = false;
+          showStatus('', false);
+          return;
+        }
+
+        // Show the Gemini-generated script
+        if (data.script) {
+          scriptText.textContent = data.script;
+          scriptBox.classList.add('visible');
+        }
+
+        const videoId = data.video_id;
+        if (!videoId) {
+          showError('No video ID returned.');
+          btn.disabled = false;
+          showStatus('', false);
+          return;
+        }
+
+        showStatus('Script ready. Generating video… This may take a minute.', true);
+        const maxAttempts = 120;
+        let attempts = 0;
+        const interval = setInterval(async () => {
+          attempts++;
+          const result = await fetch(`/api/video/status/${videoId}`).then(r => r.json());
+          if (result.error && result.status === 'error') {
+            clearInterval(interval);
+            showError(result.error);
+            btn.disabled = false;
+            showStatus('', false);
+            return;
+          }
+          if (result.status === 'completed' && result.video_url) {
+            clearInterval(interval);
+            videoEl.src = result.video_url;
+            videoWrap.classList.add('visible');
+            showStatus('Done. Video ready.', true);
+            btn.disabled = false;
+            return;
+          }
+          if (result.status === 'failed') {
+            clearInterval(interval);
+            const err = result.error;
+            showError(typeof err === 'object' && err && err.detail ? err.detail : (err && String(err)) || 'Video generation failed.');
+            btn.disabled = false;
+            showStatus('', false);
+            return;
+          }
+          if (attempts >= maxAttempts) {
+            clearInterval(interval);
+            showError('Timed out waiting for video.');
+            btn.disabled = false;
+            showStatus('', false);
+          }
+        }, 2500);
+      } catch (e) {
+        showError(e.message || 'Network error');
+        btn.disabled = false;
+        showStatus('', false);
+      }
+    });
+  </script>
+</body>
+</html>
