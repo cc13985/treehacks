@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BCI Wave Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="12" stroke="url(#grad)" stroke-width="2.5" />
+            <circle cx="14" cy="14" r="6" fill="url(#grad)" opacity="0.3" />
+            <circle cx="14" cy="14" r="3" fill="url(#grad)" />
+            <defs>
+              <linearGradient id="grad" x1="0" y1="0" x2="28" y2="28">
+                <stop stop-color="#6C63FF" />
+                <stop offset="1" stop-color="#00D2FF" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <h1>BCI Wave Monitor</h1>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-badge" id="statusBadge">
+          <span class="status-dot"></span>
+          <span class="status-text">Idle</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Wave panel -->
+      <div class="wave-panel visible" id="wavePanel">
+        <div class="panel-header">
+          <div class="channel-info">
+            <span class="channel-label">EEG Signal</span>
+            <span class="channel-sub">Brain Wave Activity</span>
+          </div>
+          <div class="panel-controls">
+            <div class="metric">
+              <span class="metric-label">Amplitude</span>
+              <span class="metric-value" id="amplitudeValue">0.00</span>
+              <span class="metric-unit">&mu;V</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Frequency</span>
+              <span class="metric-value" id="frequencyValue">0.0</span>
+              <span class="metric-unit">Hz</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Elapsed</span>
+              <span class="metric-value" id="elapsedValue">0.0s</span>
+            </div>
+            <button class="stop-btn" id="stopBtn">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="2" y="2" width="10" height="10" rx="1.5" fill="currentColor"/>
+              </svg>
+              Stop
+            </button>
+          </div>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas id="waveCanvas"></canvas>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

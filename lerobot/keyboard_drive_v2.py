@@ -1,7 +1,8 @@
 import sys
 import time
-import socket  # Required for receiving signals from Node-RED
-from scservo_sdk import * # Ensure feetech-servo-sdk is installed
+import socket
+import json
+from scservo_sdk import *  # feetech-servo-sdk
 
 # --- 1. CONFIGURATION ---
 DEVICENAME = '/dev/cu.usbmodem58FA0920121'  
@@ -100,7 +101,7 @@ def smooth_move(target_pose, duration_sec=2.0):
 # --- 5. BEHAVIORS ---
 
 def behavior_hand_over():
-    print("\n🤖 Behavior: HAND OVER (Focus Detected)")
+    print("\n🤖 Behavior: Give Candy (Attraction Detected)")
     # 1. Extend Arm
     target = POSES["EXTEND"].copy()
     target[GRIPPER] = GRIPPER_HOLD
@@ -116,7 +117,7 @@ def behavior_hand_over():
     print("✅ Ready for next command.")
 
 def behavior_refuse():
-    print("\n🤖 Behavior: REFUSE (Low Activity Detected)")
+    print("\n🤖 Behavior: Reject (Low Attraction)")
     # Shake head No (Left -> Right -> Left -> Home)
     smooth_move(POSES["LEFT"], duration_sec=0.4)
     smooth_move(POSES["RIGHT"], duration_sec=0.4)
@@ -127,8 +128,7 @@ def behavior_refuse():
 # --- 6. MAIN LOOP (UDP LISTENER) ---
 print("-----------------------------------------")
 print(f"🧠 BCI RECEIVER ACTIVE ON PORT {UDP_PORT}")
-print("   - High Beta (>1000): HAND OVER")
-print("   - Low Beta (<10 for 5s): REFUSE")
+print("   - High Beta: HAND OVER  |  Low Beta (5s): REFUSE")
 print("-----------------------------------------")
 
 # Setup Socket
@@ -140,26 +140,24 @@ try:
     while True:
         try:
             data, addr = sock.recvfrom(1024)
-            message = data.decode('utf-8').strip()
-            
-            # Continuous status update in terminal
-            print(f"\rCurrent Brain State: {message}    ", end="", flush=True)
+            message = data.decode('utf-8', errors='replace').strip()
+            if message.startswith('{'):
+                try:
+                    obj = json.loads(message)
+                    message = obj.get('payload', obj.get('message', message))
+                    if isinstance(message, str):
+                        message = message.strip().upper()
+                except Exception:
+                    pass
+            else:
+                message = message.upper()
 
             if message == "APPROACH":
+                print(f"\rCurrent Brain State: APPROACH    ", end="", flush=True)
                 behavior_hand_over()
-                # Clear any queued messages while moving
-                while True:
-                    try: sock.recvfrom(1024)
-                    except BlockingIOError: break
-                print("🧠 Listening...")
-
             elif message == "REFUSE":
+                print(f"\rCurrent Brain State: REFUSE     ", end="", flush=True)
                 behavior_refuse()
-                # Clear any queued messages while moving
-                while True:
-                    try: sock.recvfrom(1024)
-                    except BlockingIOError: break
-                print("🧠 Listening...")
 
         except BlockingIOError:
             pass
