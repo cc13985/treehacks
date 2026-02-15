@@ -116,7 +116,7 @@
 <body>
   <div class="card">
     <h1>Prompt → Script → Video</h1>
-    <p class="subtitle">Enter a topic or idea. OpenAI writes a ~30s script, then your avatar speaks it.</p>
+    <p class="subtitle">Enter a topic or idea. Perplexity writes a ~30s script, then your avatar speaks it.</p>
 
     <label for="prompt">What should the avatar talk about?</label>
     <textarea
@@ -168,7 +168,7 @@
       }
 
       btn.disabled = true;
-      showStatus('Writing script with OpenAI…', true);
+      showStatus('Writing script with Perplexity…', true);
 
       try {
         const res = await fetch('/api/video/generate', {

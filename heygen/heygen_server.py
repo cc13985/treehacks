@@ -1,10 +1,10 @@
 """
-HeyGen text → video. Prompt on homescreen → OpenAI generates ~30s script → avatar speaks it → video.
+HeyGen text → video. Prompt on homescreen → Perplexity generates ~30s script → avatar speaks it → video.
 
 Quick Start Option C: https://docs.heygen.com/docs/quick-start
 Auth: X-API-KEY from HeyGen Settings → API. Set HEYGEN_API_KEY in .env.
-OpenAI: OPENAI_API_KEY in .env.
-/api/video/generate: prompt → OpenAI script → HeyGen video
+Perplexity: PERPLEXITY_API_KEY in .env.
+/api/video/generate: prompt → Perplexity script → HeyGen video
 """
 
 import os
@@ -32,31 +32,35 @@ if AVATAR_TYPE not in ("avatar", "talking_photo"):
 
 DEFAULT_VOICE_ID = os.environ.get("HEYGEN_VOICE_ID", "d572b8091a0843c79028a8c0c06d6dc9")
 
-# OpenAI API key (keep in .env)
-OPENAI_API_KEY = (os.environ.get("OPENAI_API_KEY") or "").strip()
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+# Perplexity API key (keep in .env)
+PERPLEXITY_API_KEY = (os.environ.get("PERPLEXITY_API_KEY") or "").strip()
+PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL", "sonar")
 
 
 def _headers():
     return {"X-API-KEY": API_KEY, "Content-Type": "application/json"}
 
 
-def generate_script_with_openai(prompt: str) -> str:
+def generate_script_with_perplexity(prompt: str) -> str:
     """
-    Uses OpenAI to create a ~30-second spoken monologue script.
+    Uses Perplexity to create a ~30-second spoken monologue script.
     Returns plain text only.
     """
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not set in .env")
+    if not PERPLEXITY_API_KEY:
+        raise ValueError("PERPLEXITY_API_KEY not set in .env")
 
     system = (
-        "Write a natural spoken monologue lasting about 30 seconds "
-        "(70–85 words). No emojis, no stage directions, no lists. "
-        "Return ONLY the script text."
+        "You are a fictional script writer. Your ONLY job is to output the spoken script text. "
+        "Do NOT include any commentary, preamble, explanation, notes, citations, "
+        "quotation marks, labels like 'Script:', or anything other than the words "
+        "the speaker will say out loud. "
+        "Write a natural spoken monologue lasting about 30 seconds (70–85 words). "
+        "No emojis, no stage directions, no bullet points, no lists. "
+        "Output ONLY the raw script text — nothing else."
     )
 
     body = {
-        "model": OPENAI_MODEL,
+        "model": PERPLEXITY_MODEL,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": prompt},
@@ -66,9 +70,9 @@ def generate_script_with_openai(prompt: str) -> str:
     }
 
     r = requests.post(
-        "https://api.openai.com/v1/chat/completions",
+        "https://api.perplexity.ai/chat/completions",
         headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
             "Content-Type": "application/json",
         },
         json=body,
@@ -80,17 +84,17 @@ def generate_script_with_openai(prompt: str) -> str:
             err = r.json().get("error", {}).get("message", r.text[:300])
         except Exception:
             err = r.text[:300]
-        raise RuntimeError(f"OpenAI error: {err}")
+        raise RuntimeError(f"Perplexity error: {err}")
 
     data = r.json()
 
     try:
         text = data["choices"][0]["message"]["content"].strip()
     except Exception:
-        raise RuntimeError("OpenAI returned unexpected format")
+        raise RuntimeError("Perplexity returned unexpected format")
 
     if not text:
-        raise RuntimeError("OpenAI returned empty script")
+        raise RuntimeError("Perplexity returned empty script")
 
     return text
 
@@ -244,9 +248,9 @@ def api_generate():
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
 
-    # 1) OpenAI generates a ~30-second script
+    # 1) Perplexity generates a ~30-second script
     try:
-        script = generate_script_with_openai(prompt)
+        script = generate_script_with_perplexity(prompt)
     except Exception as e:
         return jsonify({"error": f"Script generation failed: {str(e)}"}), 500
 
