@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EEG Band Power Extraction</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --success: #3fb950;
+      --error: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-weight: 700;
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    .controls {
+      margin-bottom: 2rem;
+    }
+    .btn {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-start {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .btn-start:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+    .btn-start:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .status.running { color: var(--accent); }
+    .status.error { color: var(--error); }
+    .status.done { color: var(--success); }
+    .output {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      display: none;
+    }
+    .output.visible { display: block; }
+    .output pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+    .section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .section:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+    .section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      text-align: right;
+      padding: 0.4rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--muted); font-weight: 600; }
+    th:first-child, td:first-child { text-align: left; }
+    .error-msg { color: var(--error); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>EEG Band Power Extraction</h1>
+    <p class="subtitle">Run analysis on s52.mat — theta, alpha, betaL, betaH, gamma (Emotiv-style)</p>
+
+    <div class="controls">
+      <button type="button" class="btn btn-start" id="startBtn">Start</button>
+      <p class="status" id="status"></p>
+    </div>
+
+    <div class="output" id="output">
+      <div id="results"></div>
+    </div>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const statusEl = document.getElementById('status');
+    const outputEl = document.getElementById('output');
+    const resultsEl = document.getElementById('results');
+
+    function setStatus(msg, type = '') {
+      statusEl.textContent = msg;
+      statusEl.className = 'status ' + type;
+    }
+
+    function renderResult(data) {
+      if (data.error) {
+        resultsEl.innerHTML = '<p class="error-msg">' + escapeHtml(data.error) + '</p>';
+        return;
+      }
+
+      let html = '';
+
+      html += '<div class="section"><h3>Info</h3>';
+      html += '<p>Sampling rate: ' + data.srate + ' Hz · Channels: ' + data.n_channels + '</p>';
+      html += '<p>Bands: ' + (data.bands || []).join(', ') + '</p></div>';
+
+      if (data.rest_band_power && data.rest_band_power.length) {
+        html += '<div class="section"><h3>Rest — band power (first 5 channels)</h3>';
+        html += tableFromRows(data.rest_band_power, data.bands) + '</div>';
+      }
+
+      if (data.trial_band_power && data.trial_band_power.length) {
+        html += '<div class="section"><h3>Trial 1 — band power (first 5 channels)</h3>';
+        html += tableFromRows(data.trial_band_power, data.bands) + '</div>';
+      }
+
+      if (data.emotiv_trial) {
+        html += '<div class="section"><h3>Emotiv-style (trial)</h3>';
+        const rows = Object.entries(data.emotiv_trial).map(([elec, bands]) => {
+          const r = { Electrode: elec };
+          Object.assign(r, bands);
+          return r;
+        });
+        html += tableFromRows(rows, data.bands || Object.keys(rows[0] || {}).filter(k => k !== 'Electrode'), 'Electrode') + '</div>';
+      }
+
+      if (data.emotiv_pow_vector && data.emotiv_pow_vector.length) {
+        html += '<div class="section"><h3>Emotiv flat vector</h3>';
+        html += '<pre>' + escapeHtml(JSON.stringify(data.emotiv_pow_vector)) + '</pre></div>';
+      }
+
+      if (data.alpha_over_time && data.alpha_over_time.length) {
+        html += '<div class="section"><h3>Alpha over time (sample)</h3>';
+        const sample = data.alpha_over_time.slice(0, 10);
+        html += tableFromRows(sample, ['AF3', 'T7', 'Pz', 'T8', 'AF4'], 'time_s') + '</div>';
+      }
+
+      resultsEl.innerHTML = html;
+    }
+
+    function tableFromRows(rows, numKeys, firstKey = 'channel') {
+      if (!rows.length) return '';
+      const keys = numKeys || (Object.keys(rows[0]).filter(k => k !== firstKey));
+      let t = '<table><thead><tr><th>' + firstKey + '</th>';
+      keys.forEach(k => { t += '<th>' + k + '</th>'; });
+      t += '</tr></thead><tbody>';
+      rows.forEach(row => {
+        t += '<tr><td>' + escapeHtml(String(row[firstKey] ?? '')) + '</td>';
+        keys.forEach(k => { t += '<td>' + (row[k] != null ? Number(row[k]).toFixed(3) : '—') + '</td>'; });
+        t += '</tr>';
+      });
+      t += '</tbody></table>';
+      return t;
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      setStatus('Running…', 'running');
+      outputEl.classList.remove('visible');
+      resultsEl.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/run', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        renderResult(data);
+        outputEl.classList.add('visible');
+        setStatus('Done.', 'done');
+      } catch (e) {
+        setStatus('Error: ' + e.message, 'error');
+        resultsEl.innerHTML = '<p class="error-msg">' + escapeHtml(String(e.message)) + '</p>';
+        outputEl.classList.add('visible');
+      } finally {
+        startBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
