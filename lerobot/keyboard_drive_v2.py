@@ -11,6 +11,8 @@ BAUDRATE = 1000000
 # UDP Configuration (Must match your Node-RED UDP Node)
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
+# Port where Node-RED listens for "robot finished" (UDP in node)
+ROBOT_DONE_PORT = 5006
 
 # Motor IDs
 BASE = 1
@@ -100,6 +102,15 @@ def smooth_move(target_pose, duration_sec=2.0):
 
 # --- 5. BEHAVIORS ---
 
+def _notify_robot_done():
+    """Tell Node-RED (and thus Brain Crush) that the robot finished moving."""
+    try:
+        out = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        out.sendto(b"ROBOT_DONE", (UDP_IP, ROBOT_DONE_PORT))
+        out.close()
+    except Exception:
+        pass
+
 def behavior_hand_over():
     print("\n🤖 Behavior: Give Candy (Attraction Detected)")
     # 1. Extend Arm
@@ -115,6 +126,7 @@ def behavior_hand_over():
     print("   Retracting...")
     smooth_move(POSES["HOME"], duration_sec=2.0)
     print("✅ Ready for next command.")
+    _notify_robot_done()
 
 def behavior_refuse():
     print("\n🤖 Behavior: Reject (Low Attraction)")
@@ -124,6 +136,7 @@ def behavior_refuse():
     smooth_move(POSES["LEFT"], duration_sec=0.4)
     smooth_move(POSES["HOME"], duration_sec=1.0)
     print("✅ Ready for next command.")
+    _notify_robot_done()
 
 # --- 6. MAIN LOOP (UDP LISTENER) ---
 print("-----------------------------------------")
