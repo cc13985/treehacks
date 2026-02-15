@@ -457,8 +457,27 @@
       line-height: 1.5;
     }
 
-    .wave-stop-btn {
-      margin-top: 28px;
+    .wave-robot-status {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.95rem;
+      color: rgba(244, 114, 160, 0.95);
+      margin-top: 16px;
+      text-align: center;
+      min-height: 1.4em;
+    }
+
+    .wave-buttons {
+      margin-top: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .wave-stop-btn,
+    .wave-continue-btn {
+      margin-top: 0;
       padding: 12px 40px;
       border: 1.5px solid rgba(244,114,160,0.4);
       border-radius: 50px;
@@ -473,6 +492,18 @@
     .wave-stop-btn:hover {
       background: rgba(244,114,160,0.1);
       border-color: rgba(244,114,160,0.7);
+    }
+    .wave-continue-btn {
+      border-color: rgba(160, 200, 244, 0.5);
+      color: rgba(180, 220, 255, 0.95);
+    }
+    .wave-continue-btn:hover:not(:disabled) {
+      background: rgba(160, 200, 244, 0.1);
+      border-color: rgba(160, 200, 244, 0.7);
+    }
+    .wave-continue-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     /* ── Screen 4: Analyzing ─────────────────────── */
@@ -575,6 +606,11 @@
       transition: opacity 0.6s ease;
     }
     .root.screen5 .analyzing-screen {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .root.screen5 .wave-screen {
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.4s ease;
@@ -871,7 +907,11 @@
         <canvas id="waveCanvas"></canvas>
       </div>
       <p class="wave-desc">A real-time measure of emotional activation when thinking about someone.</p>
-      <button class="wave-stop-btn" id="waveStopBtn">stop</button>
+      <p class="wave-robot-status" id="waveRobotStatus"></p>
+      <div class="wave-buttons">
+        <button class="wave-stop-btn" id="waveStopBtn">stop</button>
+        <button class="wave-continue-btn" id="waveContinueBtn" disabled>Continue to result</button>
+      </div>
     </div>
 
     <!-- Screen 4: Analyzing / Verdict -->
@@ -1396,31 +1436,78 @@
       waveMonitor.stop();
     });
 
-    // BCI verdict: show decision (no lock)
+    // Result verdict: from BCI (approach/reject) or fallback when arm unavailable (fallback_attracted / fallback_not_attracted)
+    window.resultVerdict = null;
+
+    function showResultFromVerdict(verdict) {
+      document.getElementById('root').classList.add('screen5');
+      var heading = document.getElementById('resultHeading');
+      var sub = document.getElementById('resultSub');
+      if (verdict === 'approach' || verdict === 'fallback_attracted') {
+        if (heading) heading.textContent = 'Attracted';
+        if (sub) sub.textContent = 'Your brainwave signal shows attraction.';
+      } else if (verdict === 'reject' || verdict === 'fallback_not_attracted') {
+        if (heading) heading.textContent = 'Not attracted';
+        if (sub) sub.textContent = 'Your brainwave signal stayed low.';
+      } else {
+        if (heading) heading.textContent = 'Decision recorded.';
+        if (sub) sub.textContent = '';
+      }
+    }
+
+    // Continue to result (wave screen): enabled when robot done, 15s timeout, or fallback (brain wave ≥150)
+    var waveRobotStatusEl = document.getElementById('waveRobotStatus');
+    var waveContinueBtn = document.getElementById('waveContinueBtn');
+    if (waveContinueBtn) waveContinueBtn.addEventListener('click', function() {
+      if (window.waveRobotDoneTimeoutId) { clearTimeout(window.waveRobotDoneTimeoutId); window.waveRobotDoneTimeoutId = null; }
+      if (waveRobotStatusEl) waveRobotStatusEl.textContent = '';
+      waveContinueBtn.disabled = true;
+      waveMonitor.stop();
+      showResultFromVerdict(window.resultVerdict);
+    });
+
+    // BCI verdict: show decision; disable Continue until robot done (or 15s timeout)
     var verdictBlock = document.getElementById('verdictBlock');
     var verdictValue = document.getElementById('verdictValue');
     var analyzingText = document.getElementById('analyzingText');
     var analyzingDots = document.getElementById('analyzingDots');
     var verdictContinueBtn = document.getElementById('verdictContinueBtn');
+    var robotDoneTimeoutId = null;
 
+    window.bciVerdictReceived = false;
     window.handleBCIVerdict = function(verdict) {
+      window.bciVerdictReceived = true;
+      window.resultVerdict = verdict === 'approach' ? 'approach' : 'reject';
       if (verdictValue) verdictValue.textContent = verdict === 'approach' ? 'Hand over' : 'Refuse';
       if (verdictBlock) { verdictBlock.style.display = 'block'; }
       if (analyzingText) analyzingText.style.display = 'none';
       if (analyzingDots) analyzingDots.style.display = 'none';
       document.getElementById('root').classList.add('screen4');
+      if (verdictContinueBtn) {
+        verdictContinueBtn.disabled = true;
+        verdictContinueBtn.textContent = 'Robot moving…';
+      }
+      if (robotDoneTimeoutId) clearTimeout(robotDoneTimeoutId);
+      robotDoneTimeoutId = setTimeout(function() {
+        robotDoneTimeoutId = null;
+        if (verdictContinueBtn) { verdictContinueBtn.disabled = false; verdictContinueBtn.textContent = 'Continue'; }
+      }, 15000);
+    };
+
+    window.onRobotDone = function() {
+      if (robotDoneTimeoutId) { clearTimeout(robotDoneTimeoutId); robotDoneTimeoutId = null; }
+      if (verdictContinueBtn) { verdictContinueBtn.disabled = false; verdictContinueBtn.textContent = 'Continue'; }
     };
 
     if (verdictContinueBtn) verdictContinueBtn.addEventListener('click', function() {
+      if (robotDoneTimeoutId) { clearTimeout(robotDoneTimeoutId); robotDoneTimeoutId = null; }
+      verdictContinueBtn.disabled = false;
+      verdictContinueBtn.textContent = 'Continue';
       waveMonitor.stop();
       if (verdictBlock) verdictBlock.style.display = 'none';
       if (analyzingText) { analyzingText.style.display = ''; analyzingText.textContent = 'Analyzing your brainwaves and evaluating activation levels...'; }
       if (analyzingDots) analyzingDots.style.display = '';
-      document.getElementById('root').classList.add('screen5');
-      var heading = document.getElementById('resultHeading');
-      var sub = document.getElementById('resultSub');
-      if (heading) heading.textContent = 'Decision recorded.';
-      if (sub) sub.textContent = '';
+      showResultFromVerdict(window.resultVerdict);
     });
 
     // Show result screen (match or no-match)
@@ -1565,6 +1652,12 @@
       var trajectoryThreshold = 0;  // amplitude, 0 = disabled
       var onStopCallback = null;
 
+      // Fallback when arm unavailable: thresholds on brain wave (μV²)
+      var FALLBACK_ATTRACTED_THRESHOLD = 150;   // ≥150 → show Continue, verdict attracted
+      var FALLBACK_NOT_ATTRACTED_THRESHOLD = 3; // <3 for 5s → auto result not attracted
+      var FALLBACK_LOW_SECONDS = 5;
+      var lowValueSeconds = 0;
+
       // Visual config
       var SPEED = 1.8;
       var ERASE_W = 40;
@@ -1615,6 +1708,29 @@
           try {
             var data = JSON.parse(ev.data);
             var payload = (data && data.payload !== undefined) ? data.payload : data;
+            if (payload && (payload.verdict === 'approach' || payload.verdict === 'reject')) {
+              var statusEl = document.getElementById('waveRobotStatus');
+              var continueBtn = document.getElementById('waveContinueBtn');
+              if (statusEl) statusEl.textContent = 'Decision: ' + (payload.verdict === 'approach' ? 'Hand over' : 'Refuse') + '. Robot moving…';
+              if (continueBtn) continueBtn.disabled = true;
+              if (window.waveRobotDoneTimeoutId) clearTimeout(window.waveRobotDoneTimeoutId);
+              window.waveRobotDoneTimeoutId = setTimeout(function() {
+                window.waveRobotDoneTimeoutId = null;
+                if (statusEl) statusEl.textContent = 'Continue when ready.';
+                if (continueBtn) continueBtn.disabled = false;
+              }, 15000);
+              if (window.handleBCIVerdict) window.handleBCIVerdict(payload.verdict);
+              return;
+            }
+            if (payload && payload.robotDone === true) {
+              var statusEl = document.getElementById('waveRobotStatus');
+              var continueBtn = document.getElementById('waveContinueBtn');
+              if (window.waveRobotDoneTimeoutId) { clearTimeout(window.waveRobotDoneTimeoutId); window.waveRobotDoneTimeoutId = null; }
+              if (statusEl) statusEl.textContent = 'Robot done. Continue when ready.';
+              if (continueBtn) continueBtn.disabled = false;
+              if (window.onRobotDone) window.onRobotDone();
+              return;
+            }
             var value = (typeof payload === 'number') ? payload : (payload && (payload.amplitude != null ? payload.amplitude : payload.value));
             var raw = (payload && payload.raw != null) ? payload.raw : (data && data.raw != null ? data.raw : null);
             if (typeof raw === 'number') lastRawUv2 = raw;
@@ -1768,7 +1884,7 @@
         running = false;
         if (animId) cancelAnimationFrame(animId);
         disconnectWebSocket();
-        if (typeof onStopCallback === 'function') {
+        if (typeof onStopCallback === 'function' && reason !== 'fallback_not_attracted') {
           onStopCallback(reason, { elapsed: elapsedTime });
         }
       }
@@ -1808,12 +1924,34 @@
 
         // Same μV² display logic as pre–Brain Crush: raw when >1, else 0..1 → 0..2000
         var ampEl = document.getElementById('waveAmplitudeValue');
-        if (ampEl) {
-          var displayVal = null;
-          if (typeof lastRawUv2 === 'number') {
-            displayVal = lastRawUv2 > 1 ? lastRawUv2 : lastRawUv2 * 2000;
+        var displayVal = null;
+        if (typeof lastRawUv2 === 'number') {
+          displayVal = lastRawUv2 > 1 ? lastRawUv2 : lastRawUv2 * 2000;
+        }
+        if (ampEl) ampEl.textContent = displayVal != null ? displayVal.toFixed(2) : '—';
+
+        // Fallback when arm unavailable: use brain wave thresholds (only if no BCI verdict yet)
+        if (!window.bciVerdictReceived && hasReceivedBciData && typeof displayVal === 'number') {
+          if (displayVal >= FALLBACK_ATTRACTED_THRESHOLD) {
+            window.resultVerdict = 'fallback_attracted';
+            var statusEl = document.getElementById('waveRobotStatus');
+            var continueBtn = document.getElementById('waveContinueBtn');
+            if (statusEl) statusEl.textContent = 'Attracted (≥150 μV²). Continue when ready.';
+            if (continueBtn) continueBtn.disabled = false;
+            lowValueSeconds = 0;
+          } else if (displayVal < FALLBACK_NOT_ATTRACTED_THRESHOLD) {
+            if (window.resultVerdict !== 'approach' && window.resultVerdict !== 'fallback_attracted') {
+              lowValueSeconds += dt;
+              if (lowValueSeconds >= FALLBACK_LOW_SECONDS) {
+                window.resultVerdict = 'fallback_not_attracted';
+                lowValueSeconds = 0;
+                if (window.showResultFromVerdict) window.showResultFromVerdict('fallback_not_attracted');
+                doStop('fallback_not_attracted');
+              }
+            }
+          } else {
+            lowValueSeconds = 0;
           }
-          ampEl.textContent = displayVal != null ? displayVal.toFixed(2) : '—';
         }
 
         wCtx.save();
@@ -1844,9 +1982,12 @@
           lastRawUv2 = null;
           hasReceivedBciData = false;
           smoothedSample = 0;
+          lowValueSeconds = 0;
+          window.resultVerdict = null;
+          window.bciVerdictReceived = false;
           var ampEl = document.getElementById('waveAmplitudeValue');
           if (ampEl) ampEl.textContent = '—';
-          // connectWebSocket();  // BCI WebSocket commented out — using simulated wave
+          connectWebSocket();
           running = true;
           lastFrameTime = 0;
           elapsedTime = 0;

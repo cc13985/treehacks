@@ -60,5 +60,30 @@
     "x": 170,
     "y": 220,
     "wires": [["format-for-wave"]]
+  },
+  {
+    "id": "udp-in-robot-done",
+    "type": "udp in",
+    "z": "bci-wave-tab",
+    "name": "Robot done (port 5006)",
+    "iface": "",
+    "port": "5006",
+    "ipv": "udp4",
+    "multicast": "false",
+    "datatype": "utf8",
+    "x": 170,
+    "y": 280,
+    "wires": [["robot-done-fn"]]
+  },
+  {
+    "id": "robot-done-fn",
+    "type": "function",
+    "z": "bci-wave-tab",
+    "name": "Robot done → frontend",
+    "func": "msg.payload = { robotDone: true };\nreturn msg;",
+    "outputs": 1,
+    "x": 420,
+    "y": 280,
+    "wires": [["ws-out-bci"]]
   }
 ]
