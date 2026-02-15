@@ -96,6 +96,15 @@
       display: inline-block;
       vertical-align: middle;
       margin-left: -0.08em;
+      animation: heartbeat 1s ease-in-out infinite;
+      transform-origin: center center;
+    }
+    @keyframes heartbeat {
+      0%, 100% { font-size: 0.45em; }
+      15% { font-size: 0.56em; }
+      30% { font-size: 0.45em; }
+      45% { font-size: 0.52em; }
+      60% { font-size: 0.45em; }
     }
 
     /* Arrow: centered below headline, angled toward tagline */
@@ -680,6 +689,7 @@
       .tagline { text-align: center; }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
   <section class="root" id="root">
@@ -770,7 +780,7 @@
 
     <!-- Screen 6: Reset -->
     <div class="reset-screen" id="resetScreen">
-      <h1 class="reset-headline">BRAIN CRUSH.</h1>
+      <h1 class="reset-headline">BRAIN CRUSH<span class="heart">❤️</span></h1>
       <button class="reset-btn" id="resetBtn">Keep analyzing my brain</button>
     </div>
 
@@ -1121,24 +1131,20 @@
         return;
       }
 
+      // TODO: replace this placeholder with the real HeyGen video URL
+      var videoUrl = window.__heygenVideoUrl || 'https://app.heygen.com/placeholder-video';
+
       var btn = this;
       btn.disabled = true;
       btn.textContent = 'Sending...';
       sendStatus.textContent = '';
       emailInput.disabled = true;
 
-      // TODO: replace with actual API call to your backend
-      // fetch('/api/send-video', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     email: email,
-      //     videoUrl: heygenVideoUrl
-      //   })
-      // }).then(...)
-
-      // Simulated send for now
-      setTimeout(function() {
+      emailjs.send('service_fn7cq8j', 'template_g18y76u', {
+        to_email: email,
+        video_url: videoUrl
+      }, 'J3B8t-o3zsr-a6PTM')
+      .then(function() {
         btn.textContent = 'Sent! ✓';
         btn.style.background = 'rgba(100, 200, 120, 0.6)';
         btn.style.boxShadow = '0 4px 24px rgba(100,200,120,0.3)';
@@ -1149,7 +1155,14 @@
         setTimeout(function() {
           document.getElementById('root').classList.add('screen6');
         }, 1200);
-      }, 1500);
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Send it';
+        emailInput.disabled = false;
+        sendStatus.style.color = 'rgba(255,100,100,0.9)';
+        sendStatus.textContent = err.message || 'Something went wrong';
+      });
     });
 
     // Reset border on typing
