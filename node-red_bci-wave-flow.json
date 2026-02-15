@@ -1,0 +1,64 @@
+[
+  {
+    "id": "bci-wave-tab",
+    "type": "tab",
+    "label": "BCI → Wave Simulator",
+    "disabled": false
+  },
+  {
+    "id": "ws-listener-bci",
+    "type": "websocket-listener",
+    "path": "bci",
+    "wholemsg": "false"
+  },
+  {
+    "id": "ws-in-bci",
+    "type": "websocket in",
+    "z": "bci-wave-tab",
+    "name": "Wave clients connect here",
+    "server": "ws-listener-bci",
+    "client": "",
+    "x": 180,
+    "y": 100,
+    "wires": [[]]
+  },
+  {
+    "id": "format-for-wave",
+    "type": "function",
+    "z": "bci-wave-tab",
+    "name": "Format beta high for wave",
+    "func": "// Emotiv Beta-High: number or object e.g. { AF3: 123 } or { value: 123 }.\nconst raw = msg.payload;\nlet value;\nif (typeof raw === 'number' && !isNaN(raw)) value = raw;\nelse if (raw && typeof raw === 'object') {\n  value = raw.betaH ?? raw.highBeta ?? raw.amplitude ?? raw.value ?? raw.AF3 ?? raw.T7 ?? raw.Pz ?? raw.T8 ?? raw.AF4;\n  if (value == null) { const v = Object.values(raw).find(x => typeof x === 'number'); value = v != null ? v : 0; }\n}\nif (value == null || typeof value !== 'number') value = 0;\nconst maxBeta = 2000;\nconst normalized = Math.min(1, Math.max(0, value / maxBeta));\nmsg.payload = { amplitude: normalized, raw: value };\ndelete msg._session;\nreturn msg;",
+    "outputs": 1,
+    "x": 420,
+    "y": 220,
+    "wires": [["ws-out-bci"]]
+  },
+  {
+    "id": "ws-out-bci",
+    "type": "websocket out",
+    "z": "bci-wave-tab",
+    "name": "Send to wave simulator",
+    "server": "ws-listener-bci",
+    "client": "",
+    "x": 700,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "inject-test",
+    "type": "inject",
+    "z": "bci-wave-tab",
+    "name": "Test (fake beta high)",
+    "props": [{"p": "payload"}],
+    "repeat": "0.5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.2,
+    "topic": "",
+    "payload": "500",
+    "payloadType": "num",
+    "x": 170,
+    "y": 220,
+    "wires": [["format-for-wave"]]
+  }
+]
