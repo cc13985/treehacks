@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brain Crush</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Koulen&family=Inclusive+Sans:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ── Root ──────────────────────────────────────── */
+    .root {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0a0a1a;
+      font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+      cursor: default;
+      user-select: none;
+    }
+
+    /* ── Border frame (disabled) ───────────────────── */
+    .frame { display: none; }
+
+    /* ── Gradient glow haze ───────────────────────── */
+    .glow-wrap {
+      position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    }
+    .glow-main {
+      position: absolute;
+      width: 65%; height: 65%; top: -8%; left: -8%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(110,25,140,0.75) 0%, rgba(80,15,110,0.35) 40%, transparent 72%);
+      filter: blur(90px);
+    }
+    .glow-accent {
+      position: absolute;
+      width: 55%; height: 60%; top: 18%; left: 18%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(150,35,120,0.55) 0%, rgba(100,20,110,0.22) 42%, transparent 70%);
+      filter: blur(80px);
+    }
+    .glow-corner {
+      position: absolute;
+      width: 45%; height: 45%; bottom: -8%; right: -8%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(110,30,120,0.45) 0%, rgba(70,15,90,0.15) 45%, transparent 68%);
+      filter: blur(70px);
+    }
+
+    /* ── Dot field canvas (full-screen) ────────────── */
+    .particle-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 3;
+    }
+
+    /* ── Content: LEFT-ALIGNED hero layout ────────── */
+    .content {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 8% 0 8%;                             /* ← safe left margin */
+    }
+
+    /* Hero group: headline top-left, arrow middle, tagline right */
+    .hero {
+      position: relative;
+      width: 100%;
+      margin-bottom: 8vh;
+    }
+
+    .headline {
+      font-family: "Koulen", sans-serif;
+      font-size: clamp(3.5rem, 9vw, 7rem);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: transparent;
+      background: linear-gradient(180deg, #ffb8cc 0%, #e06080 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      white-space: nowrap;
+      margin: 0;
+      text-align: left;
+    }
+    .heart {
+      font-size: 0.45em;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: -0.08em;
+      animation: heartbeat 1s ease-in-out infinite;
+      transform-origin: center center;
+    }
+    @keyframes heartbeat {
+      0%, 100% { font-size: 0.45em; }
+      15% { font-size: 0.56em; }
+      30% { font-size: 0.45em; }
+      45% { font-size: 0.52em; }
+      60% { font-size: 0.45em; }
+    }
+
+    /* Arrow: centered below headline, angled toward tagline */
+    .vector-line {
+      display: block;
+      width: clamp(50px, 7vw, 80px);
+      height: auto;
+      opacity: 0.7;
+      margin: 16px auto 16px 45%;                     /* ← offset right of headline center */
+    }
+
+    /* Tagline: right-aligned */
+    .tagline {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(1rem, 2.2vw, 1.45rem);
+      font-weight: 400;
+      line-height: 1.45;
+      color: rgba(230, 140, 190, 0.8);
+      margin: 0;
+      text-align: right;
+    }
+
+    /* CTA: centered horizontally */
+    .cta-wrap {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+    .cta {
+      padding: 16px 52px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #f472a0 0%, #e8607a 100%);
+      color: #fff;
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 4px 30px rgba(228,96,122,0.3), 0 0 60px rgba(228,96,122,0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .cta:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 8px 36px rgba(228,96,122,0.45), 0 0 80px rgba(228,96,122,0.15);
+    }
+    .cta:active { transform: translateY(0) scale(0.98); }
+
+    /* ── TRANSITION: landing → setup screen ─────── */
+
+    /* ── Phase 1: fade out elements in place (no movement) ── */
+    .hero .vector-line {
+      transition: opacity 0.35s ease;
+    }
+    .hero .tagline {
+      transition: opacity 0.35s ease 0.08s;
+    }
+    .cta-wrap {
+      transition: opacity 0.35s ease 0.16s;
+    }
+    .root.screen2-fade .hero .vector-line {
+      opacity: 0; pointer-events: none;
+    }
+    .root.screen2-fade .hero .tagline {
+      opacity: 0; pointer-events: none;
+    }
+    .root.screen2-fade .cta-wrap {
+      opacity: 0; pointer-events: none;
+    }
+
+    /* ── Phase 2: headline slides to top-left ── */
+    .headline {
+      transform-origin: left top;
+      transition: transform 0.75s cubic-bezier(0.4, 0, 0.2, 1),
+                  font-size 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .root.screen2 .headline {
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+    }
+
+    /* ── Setup screen (second screen) ──────────── */
+    .setup-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 8% 60px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .root.screen2 .setup-screen {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Stagger each setup element in */
+    .setup-screen .setup-row,
+    .setup-screen .upload-box,
+    .setup-screen .link-text,
+    .setup-screen .next-btn {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    .root.screen2 .setup-screen .setup-row,
+    .root.screen2 .setup-screen .upload-box,
+    .root.screen2 .setup-screen .link-text,
+    .root.screen2 .setup-screen .next-btn {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Stagger delays — relative to screen2 class (phase 2) */
+    .setup-screen .setup-row:nth-child(1) {
+      transition: opacity 0.45s ease 0.3s, transform 0.45s ease 0.3s;
+    }
+    .setup-screen .setup-row:nth-child(2) {
+      transition: opacity 0.45s ease 0.4s, transform 0.45s ease 0.4s;
+    }
+    .setup-screen .upload-box {
+      transition: opacity 0.45s ease 0.5s, transform 0.45s ease 0.5s;
+    }
+    .setup-screen .link-text {
+      transition: opacity 0.45s ease 0.6s, transform 0.45s ease 0.6s;
+    }
+    .setup-screen .next-btn {
+      transition: opacity 0.45s ease 0.7s, transform 0.45s ease 0.7s;
+    }
+
+    .setup-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .setup-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 1rem;
+      color: rgba(230, 180, 210, 0.9);
+    }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 48px; height: 26px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 13px;
+      cursor: pointer;
+      border: 1.5px solid rgba(255,130,180,0.3);
+      transition: background 0.25s ease;
+      flex-shrink: 0;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: rgba(230,140,190,0.8);
+      transition: transform 0.25s ease;
+    }
+    .toggle.on {
+      background: rgba(228,96,122,0.35);
+      border-color: rgba(228,96,122,0.6);
+    }
+    .toggle.on::after {
+      transform: translateX(22px);
+      background: #f472a0;
+    }
+
+    /* Upload area */
+    .upload-box {
+      width: 200px; height: 120px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px dashed rgba(255,130,180,0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+      color: rgba(230,140,190,0.6);
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.85rem;
+    }
+    .upload-box:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,130,180,0.45);
+    }
+    .upload-icon {
+      font-size: 1.8rem;
+      opacity: 0.5;
+    }
+
+    /* Link input */
+    .link-text {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.9rem;
+      color: rgba(200,150,180,0.6);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* Next button */
+    .next-btn {
+      padding: 14px 44px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #f472a0 0%, #e8607a 100%);
+      color: #fff;
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      align-self: flex-end;
+      box-shadow: 0 4px 24px rgba(228,96,122,0.3);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .next-btn:hover:not(:disabled) {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 6px 30px rgba(228,96,122,0.45);
+    }
+    .next-btn:disabled {
+      opacity: 0.15;
+      cursor: not-allowed;
+      box-shadow: none;
+      filter: grayscale(0.6);
+    }
+
+    /* Upload status badge */
+    .upload-status {
+      font-size: 0.8rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.06);
+      color: rgba(200,150,170,0.5);
+    }
+    .upload-status.uploaded {
+      background: rgba(228,96,122,0.2);
+      color: rgba(244,114,160,0.9);
+    }
+
+    /* ── Screen 3: Wave Monitor ──────────────────── */
+    .wave-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px 8% 40px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+    .root.screen3 .setup-screen {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .root.screen3 .wave-screen {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .wave-title {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(1.1rem, 2vw, 1.5rem);
+      font-weight: 700;
+      color: rgba(244, 114, 160, 0.9);
+      margin-bottom: 24px;
+      letter-spacing: 0.01em;
+    }
+
+    .wave-canvas-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      height: 280px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .wave-canvas-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .wave-desc {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(0.75rem, 1.2vw, 0.9rem);
+      color: rgba(200, 160, 180, 0.6);
+      margin-top: 20px;
+      text-align: center;
+      max-width: 520px;
+      line-height: 1.5;
+    }
+
+    .wave-stop-btn {
+      margin-top: 28px;
+      padding: 12px 40px;
+      border: 1.5px solid rgba(244,114,160,0.4);
+      border-radius: 50px;
+      background: transparent;
+      color: rgba(244,114,160,0.8);
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .wave-stop-btn:hover {
+      background: rgba(244,114,160,0.1);
+      border-color: rgba(244,114,160,0.7);
+    }
+
+    /* ── Screen 4: Analyzing ─────────────────────── */
+    .analyzing-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+    .root.screen4 .wave-screen {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .root.screen4 .analyzing-screen {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .analyzing-text {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(0.9rem, 1.6vw, 1.15rem);
+      color: rgba(210, 170, 190, 0.75);
+      text-align: center;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .analyzing-dots {
+      display: flex;
+      gap: 12px;
+    }
+    .analyzing-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.85);
+      animation: dotBounce 1.4s ease-in-out infinite;
+    }
+    .analyzing-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .analyzing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-12px); opacity: 1; }
+    }
+
+    /* ── Screen 5: Result ───────────────────────── */
+    .result-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+    .root.screen5 .analyzing-screen {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .root.screen5 .result-screen {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .result-heading {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(1.2rem, 2.2vw, 1.6rem);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .result-sub {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(0.85rem, 1.4vw, 1.05rem);
+      color: rgba(244, 114, 160, 0.85);
+      text-align: center;
+      margin-bottom: 32px;
+      max-width: 480px;
+      line-height: 1.5;
+    }
+
+    .result-video-box {
+      width: 280px;
+      height: 160px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: rgba(244,114,160,0.5);
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.85rem;
+      overflow: hidden;
+    }
+    .result-video-box .vid-icon {
+      font-size: 2rem;
+      opacity: 0.4;
+    }
+    .result-video-box video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 16px;
+    }
+
+    .result-send-btn {
+      margin-top: 24px;
+      padding: 14px 48px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #f472a0 0%, #e8607a 100%);
+      color: #fff;
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(228,96,122,0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .result-send-btn:hover:not(:disabled) {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 6px 30px rgba(228,96,122,0.5);
+    }
+    .result-send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .email-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 24px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .email-input {
+      flex: 1;
+      padding: 12px 18px;
+      border: 1.5px solid rgba(244,114,160,0.3);
+      border-radius: 50px;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .email-input::placeholder {
+      color: rgba(200,160,180,0.4);
+    }
+    .email-input:focus {
+      border-color: rgba(244,114,160,0.7);
+    }
+
+    .send-status {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.85rem;
+      color: rgba(100,200,120,0.9);
+      margin-top: 12px;
+      height: 20px;
+    }
+
+    /* ── Screen 6: Reset / Again ────────────────── */
+    .reset-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+    .root.screen6 .result-screen {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .root.screen6 .content {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .root.screen6 .reset-screen {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .reset-headline {
+      font-family: "Koulen", sans-serif;
+      font-size: clamp(3.5rem, 9vw, 7rem);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: transparent;
+      background: linear-gradient(180deg, #ffb8cc 0%, #e06080 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      white-space: nowrap;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+
+    .reset-btn {
+      padding: 16px 52px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #f472a0 0%, #e8607a 100%);
+      color: #fff;
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 4px 30px rgba(228,96,122,0.3), 0 0 60px rgba(228,96,122,0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .reset-btn:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 8px 36px rgba(228,96,122,0.45), 0 0 80px rgba(228,96,122,0.15);
+    }
+
+    /* ── Reduced motion ───────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      .particle-canvas { opacity: 0.6; } /* static, dimmed */
+    }
+
+    /* ── Mobile ───────────────────────────────────── */
+    @media (max-width: 680px) {
+      .content { padding: 0 24px; }
+      .headline { white-space: normal; font-size: clamp(2.5rem, 12vw, 4rem); }
+      .vector-line { width: 50px; margin-left: auto; margin-right: auto; }
+      .tagline { text-align: center; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+  <section class="root" id="root">
+    <div class="frame"></div>
+
+    <div class="glow-wrap" aria-hidden="true">
+      <div class="glow-main"></div>
+      <div class="glow-accent"></div>
+      <div class="glow-corner"></div>
+    </div>
+
+    <!-- Dot field canvas (grain + depth layers) -->
+    <canvas class="particle-canvas" id="particleCanvas" aria-hidden="true"></canvas>
+
+    <!-- Content: LEFT-ALIGNED -->
+    <div class="content">
+      <div class="hero">
+        <h1 class="headline">BRAIN CRUSH<span class="heart">❤️</span></h1>
+        <img class="vector-line" src="vector1.png" alt="" aria-hidden="true" />
+        <p class="tagline">Your brain knows before you do.</p>
+      </div>
+
+      <div class="cta-wrap">
+        <button class="cta" id="ctaBtn">get started here</button>
+      </div>
+    </div>
+
+    <!-- Setup screen (hidden until transition) -->
+    <div class="setup-screen" id="setupScreen">
+      <div class="setup-card">
+
+        <div class="setup-row">
+          <span>BCI connected?</span>
+          <div class="toggle" id="bciToggle"></div>
+        </div>
+
+        <div class="setup-row">
+          <span>Video uploaded?</span>
+          <span class="upload-status" id="uploadStatus">no file</span>
+        </div>
+
+        <div class="upload-box" id="uploadBox">
+          <span class="upload-icon">📷</span>
+          <span>upload media</span>
+          <input type="file" id="fileInput" accept="video/*" style="display:none" />
+        </div>
+
+        <span class="link-text">https://heygen-link.com</span>
+
+        <button class="next-btn" id="nextBtn" disabled>next</button>
+      </div>
+    </div>
+
+    <!-- Screen 3: Wave Monitor -->
+    <div class="wave-screen" id="waveScreen">
+      <span class="wave-title">Your Attraction Rhythm</span>
+      <div class="wave-canvas-wrap">
+        <canvas id="waveCanvas"></canvas>
+      </div>
+      <p class="wave-desc">A real-time measure of emotional activation when thinking about someone.</p>
+      <button class="wave-stop-btn" id="waveStopBtn">stop</button>
+    </div>
+
+    <!-- Screen 4: Analyzing -->
+    <div class="analyzing-screen" id="analyzingScreen">
+      <p class="analyzing-text">Analyzing your brainwaves and evaluating activation levels...</p>
+      <div class="analyzing-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- Screen 5: Result -->
+    <div class="result-screen" id="resultScreen">
+      <h2 class="result-heading" id="resultHeading"></h2>
+      <p class="result-sub" id="resultSub"></p>
+      <div class="result-video-box" id="resultVideoBox">
+        <span class="vid-icon">📷</span>
+        <span>heygen video</span>
+      </div>
+      <div class="email-row">
+        <input type="email" class="email-input" id="emailInput" placeholder="their email address" />
+      </div>
+      <button class="result-send-btn" id="resultSendBtn">Send it</button>
+      <span class="send-status" id="sendStatus"></span>
+    </div>
+
+    <!-- Screen 6: Reset -->
+    <div class="reset-screen" id="resetScreen">
+      <h1 class="reset-headline">BRAIN CRUSH<span class="heart">❤️</span></h1>
+      <button class="reset-btn" id="resetBtn">Keep analyzing my brain</button>
+    </div>
+
+  </section>
+
+  <script>
+    /* ═══════════════════════════════════════════════════
+     *  DOT FIELD — two-layer grain + depth texture
+     * ═══════════════════════════════════════════════════ */
+
+    /* Layer A: grain — dense tiny dots */
+    const GRAIN_DENSITY      = 0.00025; // dots per px² (~1000 on 1920×1080)
+    const GRAIN_SIZE         = 1;       // px radius (fixed)
+    const GRAIN_OPACITY_MIN  = 0.06;
+    const GRAIN_OPACITY_MAX  = 0.14;
+    const GRAIN_REPULSE_STR  = 10;      // max displacement
+
+    /* Layer B: depth — larger, more visible, stronger motion */
+    const DEPTH_COUNT        = 200;
+    const DEPTH_SIZE_MIN     = 2;       // px radius
+    const DEPTH_SIZE_MAX     = 4;       // px radius
+    const DEPTH_OPACITY_MIN  = 0.08;
+    const DEPTH_OPACITY_MAX  = 0.22;
+    const DEPTH_REPULSE_STR  = 22;      // max displacement (strong parallax)
+    const DEPTH_BLUR_CHANCE  = 0.25;    // fraction of depth dots that get blur
+
+    /* Shared */
+    const REPULSE_RADIUS     = 200;     // px
+    const REPULSE_EASE       = 0.07;    // faster damping = more responsive
+    const GLOW_BOOST         = 0.06;    // opacity boost near cursor
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* Palette — faint magenta/purple/pink */
+    const DOT_COLORS = [
+      [200, 120, 180],
+      [180, 100, 200],
+      [210, 140, 175],
+      [170, 110, 195],
+      [220, 150, 190],
+      [160, 95,  180],
+    ];
+
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let W, HH;
+    let dpr = window.devicePixelRatio || 1;
+    let mouseX = -9999, mouseY = -9999;
+
+    const grainDots = [];
+    const depthDots = [];
+
+    function makeDot(sizeMin, sizeMax, opMin, opMax, blur) {
+      const size = sizeMin + Math.random() * (sizeMax - sizeMin);
+      const baseOpacity = opMin + Math.random() * (opMax - opMin);
+      const color = DOT_COLORS[(Math.random() * DOT_COLORS.length) | 0];
+      return {
+        homeX: Math.random() * W,
+        homeY: Math.random() * HH,
+        x: 0, y: 0,
+        offX: 0, offY: 0,
+        phaseX: Math.random() * 100,
+        phaseY: Math.random() * 100,
+        size: size,
+        baseOpacity: baseOpacity,
+        opacity: baseOpacity,
+        r: color[0], g: color[1], b: color[2],
+        blur: blur,
+      };
+    }
+
+    function initDots() {
+      W = window.innerWidth;
+      HH = window.innerHeight;
+      canvas.width  = W * dpr;
+      canvas.height = HH * dpr;
+      canvas.style.width  = W + 'px';
+      canvas.style.height = HH + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Layer A: grain
+      const grainCount = Math.round(GRAIN_DENSITY * W * HH);
+      grainDots.length = 0;
+      for (let i = 0; i < grainCount; i++) {
+        grainDots.push(makeDot(GRAIN_SIZE, GRAIN_SIZE, GRAIN_OPACITY_MIN, GRAIN_OPACITY_MAX, 0));
+      }
+
+      // Layer B: depth
+      depthDots.length = 0;
+      for (let i = 0; i < DEPTH_COUNT; i++) {
+        const blur = Math.random() < DEPTH_BLUR_CHANCE ? 1.5 : 0;
+        depthDots.push(makeDot(DEPTH_SIZE_MIN, DEPTH_SIZE_MAX, DEPTH_OPACITY_MIN, DEPTH_OPACITY_MAX, blur));
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  ANIMATION LOOP
+     * ═══════════════════════════════════════════════════ */
+    const REPULSE_SQ = REPULSE_RADIUS * REPULSE_RADIUS;
+
+    function updateAndDraw(dots, repStr, jitterAmt, time) {
+      const mouseActive = mouseX > -9000;
+
+      for (let i = 0; i < dots.length; i++) {
+        const d = dots[i];
+
+        // Tiny jitter drift (living texture, not floating)
+        const jx = Math.sin(time * 0.2 + d.phaseX) * jitterAmt +
+                   Math.sin(time * 0.11 + d.phaseX * 2.3) * (jitterAmt * 0.4);
+        const jy = Math.cos(time * 0.18 + d.phaseY) * jitterAmt +
+                   Math.cos(time * 0.09 + d.phaseY * 1.7) * (jitterAmt * 0.3);
+
+        let targetX = d.homeX + jx;
+        let targetY = d.homeY + jy;
+
+        // Repulsion
+        let repelX = 0, repelY = 0;
+        let nearMouse = false;
+
+        if (mouseActive) {
+          const dx = (targetX + d.offX) - mouseX;
+          const dy = (targetY + d.offY) - mouseY;
+          const distSq = dx * dx + dy * dy;
+
+          if (distSq < REPULSE_SQ && distSq > 1) {
+            const dist = Math.sqrt(distSq);
+            const force = 1 - dist / REPULSE_RADIUS;
+            const str = force * force * repStr;
+            repelX = (dx / dist) * str;
+            repelY = (dy / dist) * str;
+            nearMouse = true;
+          }
+        }
+
+        d.offX += (repelX - d.offX) * REPULSE_EASE;
+        d.offY += (repelY - d.offY) * REPULSE_EASE;
+
+        d.x = targetX + d.offX;
+        d.y = targetY + d.offY;
+
+        // Subtle glow near cursor
+        const tgtOp = nearMouse ? Math.min(d.baseOpacity + GLOW_BOOST, 0.18) : d.baseOpacity;
+        d.opacity += (tgtOp - d.opacity) * 0.06;
+
+        // Draw
+        if (d.blur > 0) {
+          ctx.shadowBlur = d.blur;
+          ctx.shadowColor = 'rgba(' + d.r + ',' + d.g + ',' + d.b + ',0.25)';
+        }
+
+        ctx.globalAlpha = d.opacity;
+        ctx.fillStyle = 'rgb(' + d.r + ',' + d.g + ',' + d.b + ')';
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (d.blur > 0) ctx.shadowBlur = 0;
+      }
+    }
+
+    function tick(ts) {
+      if (prefersReduced) return;
+
+      ctx.clearRect(0, 0, W, HH);
+      const time = ts * 0.001;
+
+      // Layer A: grain (tiny jitter = 2px, low repulsion)
+      updateAndDraw(grainDots, GRAIN_REPULSE_STR, 2, time);
+      // Layer B: depth (more jitter = 5px, stronger repulsion = parallax)
+      updateAndDraw(depthDots, DEPTH_REPULSE_STR, 5, time);
+
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(tick);
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  MOUSE TRACKING
+     * ═══════════════════════════════════════════════════ */
+    window.addEventListener('mousemove', function(e) {
+      if (prefersReduced) return;
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+    window.addEventListener('mouseleave', function() {
+      mouseX = -9999; mouseY = -9999;
+    });
+
+    /* Pause when tab hidden */
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && !prefersReduced) requestAnimationFrame(tick);
+    });
+
+    /* ═══════════════════════════════════════════════════
+     *  INIT
+     * ═══════════════════════════════════════════════════ */
+    window.addEventListener('resize', function() {
+      dpr = window.devicePixelRatio || 1;
+      initDots();
+    });
+    window.addEventListener('load', function() {
+      initDots();
+      if (prefersReduced) {
+        // Static render once
+        const allDots = grainDots.concat(depthDots);
+        for (const d of allDots) {
+          ctx.globalAlpha = d.baseOpacity * 0.7;
+          ctx.fillStyle = 'rgb(' + d.r + ',' + d.g + ',' + d.b + ')';
+          ctx.beginPath();
+          ctx.arc(d.homeX, d.homeY, d.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else {
+        requestAnimationFrame(tick);
+      }
+    });
+
+    /* ═══════════════════════════════════════════════════
+     *  SCREEN TRANSITION
+     * ═══════════════════════════════════════════════════ */
+    document.getElementById('ctaBtn').addEventListener('click', function() {
+      var root = document.getElementById('root');
+      var headline = document.querySelector('.headline');
+
+      // Phase 1: fade out elements in place
+      root.classList.add('screen2-fade');
+
+      // Phase 2: after fades finish, slide headline to top-left
+      setTimeout(function() {
+        // Where the headline is right now
+        var rect = headline.getBoundingClientRect();
+
+        // Where we want it: top-left corner
+        var targetX = window.innerWidth * 0.08;
+        var targetY = 28;
+
+        var dx = targetX - rect.left;
+        var dy = targetY - rect.top;
+
+        // Translate to target + font-size shrinks via CSS transition
+        headline.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+
+        root.classList.add('screen2');
+      }, 500);
+    });
+
+    // Gate logic: BCI on + file uploaded → enable "next"
+    var bciToggle    = document.getElementById('bciToggle');
+    var nextBtn      = document.getElementById('nextBtn');
+    var uploadBox    = document.getElementById('uploadBox');
+    var fileInput    = document.getElementById('fileInput');
+    var uploadStatus = document.getElementById('uploadStatus');
+    var fileUploaded = false;
+
+    function updateNextBtn() {
+      var ready = bciToggle.classList.contains('on') && fileUploaded;
+      nextBtn.disabled = !ready;
+    }
+
+    bciToggle.addEventListener('click', function() {
+      this.classList.toggle('on');
+      updateNextBtn();
+    });
+
+    // Click upload box → open file picker
+    uploadBox.addEventListener('click', function() {
+      fileInput.click();
+    });
+
+    // File selected → mark as uploaded
+    fileInput.addEventListener('change', function() {
+      if (this.files && this.files.length > 0) {
+        fileUploaded = true;
+        var name = this.files[0].name;
+        // Truncate long names
+        if (name.length > 20) name = name.substring(0, 17) + '...';
+        uploadStatus.textContent = name;
+        uploadStatus.classList.add('uploaded');
+        uploadBox.querySelector('.upload-icon').textContent = '✅';
+        updateNextBtn();
+      }
+    });
+
+    // Next button → transition to wave monitor
+    nextBtn.addEventListener('click', function() {
+      if (!this.disabled) {
+        document.getElementById('root').classList.add('screen3');
+        // Start wave monitor after transition
+        setTimeout(function() {
+          waveMonitor.start({
+            timeLimit: 0,              // seconds (0 = no limit, change to e.g. 30)
+            trajectoryThreshold: 0,    // amplitude (0 = disabled, change to e.g. 0.9)
+            onStop: function(reason, data) {
+              console.log('[Wave] Stopped:', reason, '| elapsed:', data.elapsed.toFixed(1) + 's');
+              // Transition to analyzing screen
+              document.getElementById('root').classList.add('screen4');
+
+              // Determine result: did signal cross the threshold?
+              var isMatch = (reason === 'trajectory');
+
+              // Wait for "HeyGen video generation" (simulate with timeout for now)
+              // Replace this timeout with actual HeyGen API callback later
+              var HEYGEN_WAIT = 4000; // ms — simulated generation time
+              setTimeout(function() {
+                showResult(isMatch);
+              }, HEYGEN_WAIT);
+            }
+          });
+        }, 600);
+      }
+    });
+
+    // Stop button on wave screen → triggers onStop which shows analyzing
+    document.getElementById('waveStopBtn').addEventListener('click', function() {
+      waveMonitor.stop();
+    });
+
+    // Show result screen (match or no-match)
+    function showResult(isMatch) {
+      var heading = document.getElementById('resultHeading');
+      var sub     = document.getElementById('resultSub');
+      var videoBox = document.getElementById('resultVideoBox');
+
+      if (isMatch) {
+        heading.textContent = "It\u2019s a match.";
+        sub.textContent = "Your emotional signal crossed the courage threshold.";
+      } else {
+        heading.textContent = "Not romantic but still real.";
+        sub.textContent = "Your response suggests comfort, not romantic intensity.";
+      }
+
+      // TODO: replace placeholder with actual HeyGen video
+      // Example: videoBox.innerHTML = '<video src="heygen-output.mp4" autoplay loop muted></video>';
+
+      document.getElementById('root').classList.add('screen5');
+    }
+
+    // Send button → email the heygen video
+    var emailInput = document.getElementById('emailInput');
+    var sendStatus = document.getElementById('sendStatus');
+    var resultSendBtn = document.getElementById('resultSendBtn');
+
+    resultSendBtn.addEventListener('click', function() {
+      var email = emailInput.value.trim();
+      if (!email) {
+        emailInput.style.borderColor = 'rgba(255,80,80,0.7)';
+        emailInput.focus();
+        return;
+      }
+
+      // TODO: replace this placeholder with the real HeyGen video URL
+      var videoUrl = window.__heygenVideoUrl || 'https://app.heygen.com/placeholder-video';
+
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      sendStatus.textContent = '';
+      emailInput.disabled = true;
+
+      emailjs.send('service_fn7cq8j', 'template_g18y76u', {
+        to_email: email,
+        video_url: videoUrl
+      }, 'J3B8t-o3zsr-a6PTM')
+      .then(function() {
+        btn.textContent = 'Sent! ✓';
+        btn.style.background = 'rgba(100, 200, 120, 0.6)';
+        btn.style.boxShadow = '0 4px 24px rgba(100,200,120,0.3)';
+        sendStatus.textContent = 'Video sent to ' + email;
+        console.log('[Result] Video sent to:', email);
+
+        // After a beat, transition to reset screen
+        setTimeout(function() {
+          document.getElementById('root').classList.add('screen6');
+        }, 1200);
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Send it';
+        emailInput.disabled = false;
+        sendStatus.style.color = 'rgba(255,100,100,0.9)';
+        sendStatus.textContent = err.message || 'Something went wrong';
+      });
+    });
+
+    // Reset border on typing
+    emailInput.addEventListener('input', function() {
+      this.style.borderColor = '';
+    });
+
+    // Reset button → go back to landing screen
+    document.getElementById('resetBtn').addEventListener('click', function() {
+      var root = document.getElementById('root');
+
+      // Clear all screen classes
+      root.classList.remove('screen2-fade', 'screen2', 'screen3', 'screen4', 'screen5', 'screen6');
+
+      // Reset headline transform + font size
+      var headline = document.querySelector('.headline');
+      headline.style.transition = 'none';
+      headline.style.transform = '';
+      headline.offsetHeight; // force reflow
+      headline.style.transition = '';
+
+      // Reset all UI state
+      bciToggle.classList.remove('on');
+      fileUploaded = false;
+      uploadStatus.textContent = 'no file';
+      uploadStatus.classList.remove('uploaded');
+      document.querySelector('#uploadBox .upload-icon').textContent = '📷';
+      fileInput.value = '';
+      nextBtn.disabled = true;
+
+      resultSendBtn.disabled = false;
+      resultSendBtn.textContent = 'Send it';
+      resultSendBtn.style.background = '';
+      resultSendBtn.style.boxShadow = '';
+      emailInput.value = '';
+      emailInput.disabled = false;
+      sendStatus.textContent = '';
+    });
+
+    /* ═══════════════════════════════════════════════════
+     *  WAVE MONITOR — pink-themed attraction rhythm
+     * ═══════════════════════════════════════════════════ */
+    var waveMonitor = (function() {
+      var wCanvas = document.getElementById('waveCanvas');
+      var wCtx = wCanvas.getContext('2d');
+      var wW = 0, wH = 0;
+      var wDPR = window.devicePixelRatio || 1;
+      var wBuffer = [];
+      var sweepX = 0;
+      var running = false;
+      var animId = null;
+      var lastFrameTime = 0;
+
+      // Signal state
+      var phase = 0;
+      var ampTarget = 0.6, ampCurrent = 0.6;
+      var driftTimer = 0;
+      var elapsedTime = 0;
+      var FREQ = 0.7;
+
+      // Stop conditions (configurable via start options)
+      var timeLimit = 0;            // seconds, 0 = no limit
+      var trajectoryThreshold = 0;  // amplitude, 0 = disabled
+      var onStopCallback = null;
+
+      // Visual config
+      var SPEED = 1.8;
+      var ERASE_W = 40;
+      var LINE_W = 2.5;
+      var TICKER_R = 7;
+      var PINK = '#f472a0';
+      var PINK_RGB = '244,114,160';
+
+      function resize() {
+        var wrap = wCanvas.parentElement;
+        if (!wrap) return;
+        var rect = wrap.getBoundingClientRect();
+        wW = rect.width;
+        wH = rect.height;
+        wCanvas.width = wW * wDPR;
+        wCanvas.height = wH * wDPR;
+        wCanvas.style.width = wW + 'px';
+        wCanvas.style.height = wH + 'px';
+        wCtx.setTransform(wDPR, 0, 0, wDPR, 0, 0);
+        wBuffer = new Array(Math.ceil(wW)).fill(null);
+        sweepX = 0;
+      }
+
+      function genSample(dt) {
+        phase += dt;
+        driftTimer -= dt;
+        if (driftTimer <= 0) {
+          ampTarget = 0.3 + Math.random() * 0.7;
+          driftTimer = 2 + Math.random() * 4;
+        }
+        ampCurrent += (ampTarget - ampCurrent) * 0.008;
+        return Math.sin(phase * FREQ * 2 * Math.PI) * ampCurrent +
+               Math.sin(phase * FREQ * 4 * Math.PI) * ampCurrent * 0.12;
+      }
+
+      function drawGrid() {
+        wCtx.save();
+        wCtx.strokeStyle = 'rgba(60, 30, 50, 0.3)';
+        wCtx.lineWidth = 1;
+        for (var i = 1; i < 6; i++) {
+          var y = (wH / 6) * i;
+          wCtx.beginPath(); wCtx.moveTo(0, y); wCtx.lineTo(wW, y); wCtx.stroke();
+        }
+        // Center baseline
+        wCtx.strokeStyle = 'rgba(100, 50, 70, 0.3)';
+        wCtx.lineWidth = 1;
+        wCtx.beginPath(); wCtx.moveTo(0, wH / 2); wCtx.lineTo(wW, wH / 2); wCtx.stroke();
+        wCtx.restore();
+      }
+
+      function drawWave(tickX, tickY) {
+        var midY = wH / 2;
+        wCtx.save();
+        wCtx.lineWidth = LINE_W;
+        wCtx.lineCap = 'round';
+        wCtx.lineJoin = 'round';
+
+        var eraseEnd = (sweepX + ERASE_W) % wW;
+
+        // Trail
+        wCtx.beginPath();
+        var drawing = false;
+        for (var x = 0; x < wW; x++) {
+          var inErase = eraseEnd > sweepX
+            ? (x >= sweepX && x <= eraseEnd)
+            : (x >= sweepX || x <= eraseEnd);
+          if (inErase || wBuffer[x] === null) {
+            if (drawing) { wCtx.stroke(); drawing = false; }
+            continue;
+          }
+          if (!drawing) {
+            wCtx.beginPath();
+            var dist = x < sweepX ? sweepX - x : sweepX + (wW - x);
+            var opacity = Math.max(0.15, 1 - dist / wW);
+            wCtx.strokeStyle = 'rgba(' + PINK_RGB + ',' + opacity + ')';
+            wCtx.shadowColor = 'rgba(' + PINK_RGB + ',' + (opacity * 0.4) + ')';
+            wCtx.shadowBlur = 6;
+            wCtx.moveTo(x, wBuffer[x]);
+            drawing = true;
+          } else {
+            wCtx.lineTo(x, wBuffer[x]);
+          }
+        }
+        if (drawing) wCtx.stroke();
+
+        // Bright head
+        var bLen = 60;
+        var bStart = Math.floor(sweepX) - bLen;
+        if (bStart >= 0) {
+          wCtx.beginPath();
+          wCtx.strokeStyle = 'rgba(' + PINK_RGB + ',1)';
+          wCtx.shadowColor = 'rgba(' + PINK_RGB + ',0.6)';
+          wCtx.shadowBlur = 12;
+          wCtx.lineWidth = LINE_W + 0.5;
+          drawing = false;
+          for (var x2 = bStart; x2 < Math.floor(sweepX); x2++) {
+            if (wBuffer[x2] === null) {
+              if (drawing) { wCtx.stroke(); wCtx.beginPath(); drawing = false; }
+              continue;
+            }
+            if (!drawing) { wCtx.moveTo(x2, wBuffer[x2]); drawing = true; }
+            else { wCtx.lineTo(x2, wBuffer[x2]); }
+          }
+          if (drawing) wCtx.stroke();
+        }
+        wCtx.restore();
+
+        // Ticker — pink heart-themed
+        if (tickX <= 0 || tickX >= wW) return;
+
+        // Outer glow
+        var glow = wCtx.createRadialGradient(tickX, tickY, 0, tickX, tickY, TICKER_R * 3);
+        glow.addColorStop(0, 'rgba(' + PINK_RGB + ',0.4)');
+        glow.addColorStop(1, 'rgba(' + PINK_RGB + ',0)');
+        wCtx.fillStyle = glow;
+        wCtx.beginPath();
+        wCtx.arc(tickX, tickY, TICKER_R * 3, 0, Math.PI * 2);
+        wCtx.fill();
+
+        // Heart symbol at ticker
+        wCtx.font = (TICKER_R * 2.2) + 'px sans-serif';
+        wCtx.textAlign = 'center';
+        wCtx.textBaseline = 'middle';
+        wCtx.fillStyle = PINK;
+        wCtx.shadowColor = 'rgba(' + PINK_RGB + ',0.8)';
+        wCtx.shadowBlur = 10;
+        wCtx.fillText('♥', tickX, tickY);
+        wCtx.shadowBlur = 0;
+      }
+
+      function doStop(reason) {
+        running = false;
+        if (animId) cancelAnimationFrame(animId);
+        if (typeof onStopCallback === 'function') {
+          onStopCallback(reason, { elapsed: elapsedTime });
+        }
+      }
+
+      function frame(ts) {
+        if (!running) return;
+        var dt = lastFrameTime ? (ts - lastFrameTime) / 1000 : 1 / 60;
+        lastFrameTime = ts;
+        elapsedTime += dt;
+
+        // Check time limit
+        if (timeLimit > 0 && elapsedTime >= timeLimit) {
+          doStop('time_limit');
+          return;
+        }
+
+        var sample = genSample(dt);
+
+        // Check trajectory threshold
+        if (trajectoryThreshold > 0 && Math.abs(sample) >= trajectoryThreshold) {
+          doStop('trajectory');
+          return;
+        }
+        var midY = wH / 2;
+        var amp = wH * 0.35;
+        var y = midY - sample * amp;
+
+        var steps = Math.ceil(SPEED);
+        var lastX = Math.floor(sweepX);
+        for (var i = 0; i < steps; i++) {
+          var bx = Math.floor(sweepX + i) % wW;
+          wBuffer[bx] = y;
+          lastX = bx;
+          wBuffer[(bx + Math.floor(ERASE_W)) % wW] = null;
+        }
+        sweepX = (sweepX + SPEED) % wW;
+
+        wCtx.save();
+        wCtx.setTransform(1, 0, 0, 1, 0, 0);
+        wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+        wCtx.restore();
+        drawGrid();
+        drawWave(lastX, y);
+
+        animId = requestAnimationFrame(frame);
+      }
+
+      return {
+        /**
+         * start({ timeLimit: 30, trajectoryThreshold: 0.9, onStop: fn })
+         *   timeLimit — seconds, 0 = no limit
+         *   trajectoryThreshold — amplitude value, 0 = disabled
+         *   onStop(reason, data) — called when auto-stopped
+         */
+        start: function(opts) {
+          opts = opts || {};
+          timeLimit = opts.timeLimit || 0;
+          trajectoryThreshold = opts.trajectoryThreshold || 0;
+          onStopCallback = opts.onStop || null;
+          resize();
+          running = true;
+          lastFrameTime = 0;
+          elapsedTime = 0;
+          phase = 0; driftTimer = 0; ampCurrent = 0.6;
+          sweepX = 0;
+          wBuffer = new Array(Math.ceil(wW)).fill(null);
+          animId = requestAnimationFrame(frame);
+        },
+        stop: function() {
+          doStop('manual');
+        },
+        resize: resize,
+        isRunning: function() { return running; },
+        getElapsed: function() { return elapsedTime; }
+      };
+    })();
+
+    window.addEventListener('resize', function() { if (waveMonitor) waveMonitor.resize(); });
+  </script>
+</body>
+</html>
