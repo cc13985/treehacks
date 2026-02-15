@@ -12,6 +12,7 @@ from typing import Optional
 
 import requests
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 
 try:
     from dotenv import load_dotenv
@@ -20,6 +21,7 @@ except ImportError:
     pass
 
 app = Flask(__name__, static_folder="heygen_static")
+CORS(app)  # allow cross-origin requests from frontend (port 8080)
 
 HEYGEN_API = "https://api.heygen.com"
 API_KEY = (os.environ.get("HEYGEN_API_KEY") or os.environ.get("LIVEAVATAR_API_KEY") or "").strip()

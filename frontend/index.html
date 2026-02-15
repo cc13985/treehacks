@@ -96,6 +96,15 @@
       display: inline-block;
       vertical-align: middle;
       margin-left: -0.08em;
+      animation: heartbeat 1s ease-in-out infinite;
+      transform-origin: center center;
+    }
+    @keyframes heartbeat {
+      0%, 100% { font-size: 0.45em; }
+      15% { font-size: 0.56em; }
+      30% { font-size: 0.45em; }
+      45% { font-size: 0.52em; }
+      60% { font-size: 0.45em; }
     }
 
     /* Arrow: centered below headline, angled toward tagline */
@@ -595,8 +604,8 @@
     }
 
     .result-video-box {
-      width: 280px;
-      height: 160px;
+      width: 360px;
+      height: 220px;
       border-radius: 16px;
       background: rgba(255,255,255,0.05);
       border: 1.5px solid rgba(255,255,255,0.08);
@@ -622,8 +631,69 @@
       border-radius: 16px;
     }
 
-    .result-send-btn {
+    /* (result-send-btn removed — replaced by download + share buttons) */
+
+    /* Share & Download section */
+    .share-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
       margin-top: 24px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .share-label {
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.85rem;
+      color: rgba(230, 180, 210, 0.7);
+    }
+
+    .share-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .share-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: 1.5px solid rgba(244,114,160,0.3);
+      border-radius: 50px;
+      background: rgba(255,255,255,0.05);
+      color: rgba(230, 180, 210, 0.9);
+      font-family: "Inclusive Sans", sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+      text-decoration: none;
+    }
+    .share-btn:hover {
+      background: rgba(244,114,160,0.12);
+      border-color: rgba(244,114,160,0.6);
+      transform: translateY(-1px);
+    }
+    .share-btn .share-icon {
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .share-btn.whatsapp { border-color: rgba(37,211,102,0.4); }
+    .share-btn.whatsapp:hover { background: rgba(37,211,102,0.12); border-color: rgba(37,211,102,0.7); }
+
+    .share-btn.messenger { border-color: rgba(0,132,255,0.4); }
+    .share-btn.messenger:hover { background: rgba(0,132,255,0.12); border-color: rgba(0,132,255,0.7); }
+
+    .share-btn.copy-link { border-color: rgba(200,160,180,0.3); }
+    .share-btn.copy-link:hover { background: rgba(200,160,180,0.1); border-color: rgba(200,160,180,0.6); }
+
+    .download-btn {
       padding: 14px 48px;
       border: none;
       border-radius: 50px;
@@ -635,48 +705,22 @@
       cursor: pointer;
       box-shadow: 0 4px 24px rgba(228,96,122,0.35);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
     }
-    .result-send-btn:hover:not(:disabled) {
+    .download-btn:hover:not(:disabled) {
       transform: translateY(-2px) scale(1.03);
       box-shadow: 0 6px 30px rgba(228,96,122,0.5);
     }
-    .result-send-btn:disabled {
+    .download-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
 
-    .email-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 24px;
-      width: 100%;
-      max-width: 380px;
-    }
-    .email-input {
-      flex: 1;
-      padding: 12px 18px;
-      border: 1.5px solid rgba(244,114,160,0.3);
-      border-radius: 50px;
-      background: rgba(255,255,255,0.05);
-      color: #fff;
-      font-family: "Inclusive Sans", sans-serif;
-      font-size: 0.9rem;
-      outline: none;
-      transition: border-color 0.2s ease;
-    }
-    .email-input::placeholder {
-      color: rgba(200,160,180,0.4);
-    }
-    .email-input:focus {
-      border-color: rgba(244,114,160,0.7);
-    }
-
-    .send-status {
+    .share-status {
       font-family: "Inclusive Sans", sans-serif;
       font-size: 0.85rem;
       color: rgba(100,200,120,0.9);
-      margin-top: 12px;
       height: 20px;
     }
 
@@ -853,11 +897,23 @@
         <span class="vid-icon">📷</span>
         <span>heygen video</span>
       </div>
-      <div class="email-row">
-        <input type="email" class="email-input" id="emailInput" placeholder="their email address" />
+      <a class="download-btn" id="downloadBtn" href="#" download="braincrush-video.mp4">Download Video</a>
+      <div class="share-section">
+        <span class="share-label">Share with someone special</span>
+        <div class="share-buttons">
+          <button class="share-btn whatsapp" id="shareWhatsapp">
+            <span class="share-icon">💬</span> WhatsApp
+          </button>
+          <button class="share-btn messenger" id="shareMessenger">
+            <span class="share-icon">💙</span> Messenger
+          </button>
+          <button class="share-btn copy-link" id="shareCopyLink">
+            <span class="share-icon">🔗</span> Copy Link
+          </button>
+        </div>
+        <span class="share-status" id="shareStatus"></span>
       </div>
-      <button class="result-send-btn" id="resultSendBtn">Send it</button>
-      <span class="send-status" id="sendStatus"></span>
+      <button class="wave-stop-btn" id="backHomeBtn" style="margin-top:28px;">Start Over</button>
     </div>
 
     <!-- Screen 6: Reset -->
@@ -1118,11 +1174,15 @@
     var fileUploaded = false;
 
     function updateNextBtn() {
-      var ready = bciToggle.classList.contains('on') && fileUploaded;
+      // BCI requirement commented out — only need file upload now
+      // var ready = bciToggle.classList.contains('on') && fileUploaded;
+      var ready = fileUploaded;
       nextBtn.disabled = !ready;
     }
 
-    // BCI connection: drive toggle from real WebSocket to Node-RED (ws://localhost:1880/bci)
+    // BCI connection commented out — no BCI hardware required
+    // To re-enable, uncomment this block:
+    /*
     (function() {
       var BCI_WS_URL = 'ws://localhost:1880/bci';
       var reconnectDelay = 3000;
@@ -1175,8 +1235,14 @@
       }
 
       connect();
-      // Optional: expose so "Try again" can call window.bciReconnect()
       window.bciReconnect = function() { clearTimeout(reconnectTimer); connect(); };
+    })();
+    */
+    // Show BCI as "skipped" in the UI
+    (function() {
+      var bciStatus = document.getElementById('bciStatus');
+      if (bciStatus) bciStatus.textContent = 'skipped';
+      bciToggle.classList.add('on');
     })();
 
     // Click upload box → open file picker
@@ -1198,10 +1264,112 @@
       }
     });
 
+    // ── HeyGen video generation ─────────────────────
+    var HEYGEN_API_BASE = 'http://localhost:5000';
+    var HEYGEN_PROMPT_MATCH = "write a script for a video message to a lover, im greatful things went well today and im excited for where our future takes us";
+    var HEYGEN_PROMPT_NO_MATCH = "write a script for a video message to a friend who confessed earlier in the day but got rejected, im greatful for the friendship and would never compromise the friendship";
+    var heygenVideoUrl = null;   // set once video is ready
+    var heygenVideoReady = false;
+    var heygenGenerating = false;
+    var pendingIsMatch = false;  // determined by random coin flip at start
+
+    function startHeygenGeneration(prompt) {
+      if (heygenGenerating) return;
+      heygenGenerating = true;
+      heygenVideoReady = false;
+      heygenVideoUrl = null;
+      console.log('[HeyGen] Starting video generation… isMatch:', pendingIsMatch);
+      if (analyzingText) analyzingText.textContent = 'Generating your personalized video message…';
+
+      fetch(HEYGEN_API_BASE + '/api/video/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          console.error('[HeyGen] Generation error:', data.error);
+          if (analyzingText) analyzingText.textContent = 'Video generation failed: ' + data.error;
+          heygenGenerating = false;
+          return;
+        }
+        console.log('[HeyGen] Video ID:', data.video_id, '| Script:', data.script);
+        if (analyzingText) analyzingText.textContent = 'Script generated! Rendering avatar video…';
+        pollHeygenStatus(data.video_id);
+      })
+      .catch(function(err) {
+        console.error('[HeyGen] Fetch error:', err);
+        if (analyzingText) analyzingText.textContent = 'Could not reach HeyGen server. Is it running on port 5000?';
+        heygenGenerating = false;
+      });
+    }
+
+    function pollHeygenStatus(videoId) {
+      var pollInterval = 5000; // 5 seconds between polls
+      var maxPolls = 120;      // up to 10 minutes
+      var pollCount = 0;
+
+      function poll() {
+        pollCount++;
+        fetch(HEYGEN_API_BASE + '/api/video/status/' + videoId)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            console.log('[HeyGen] Poll #' + pollCount + ':', data.status);
+            if (data.status === 'completed' && data.video_url) {
+              heygenVideoUrl = data.video_url;
+              heygenVideoReady = true;
+              heygenGenerating = false;
+              console.log('[HeyGen] Video ready:', heygenVideoUrl);
+              // If we're still on analyzing screen, auto-advance to result
+              if (document.getElementById('root').classList.contains('screen4') &&
+                  !document.getElementById('root').classList.contains('screen5')) {
+                showResult(pendingIsMatch);
+              }
+              // If already on result screen, update the video box in-place
+              var vbox = document.getElementById('resultVideoBox');
+              if (vbox && document.getElementById('root').classList.contains('screen5')) {
+                vbox.innerHTML = '<video src="' + heygenVideoUrl + '" autoplay controls style="width:100%;height:100%;object-fit:cover;border-radius:16px;"></video>';
+              }
+            } else if (data.status === 'failed' || data.status === 'error') {
+              console.error('[HeyGen] Video failed:', data.error);
+              if (analyzingText) analyzingText.textContent = 'Video rendering failed: ' + (data.error || 'unknown error');
+              heygenGenerating = false;
+            } else if (pollCount < maxPolls) {
+              // Still processing — keep polling
+              if (analyzingText) analyzingText.textContent = 'Rendering avatar video… (this may take 1-2 minutes)';
+              setTimeout(poll, pollInterval);
+            } else {
+              console.error('[HeyGen] Timed out waiting for video');
+              if (analyzingText) analyzingText.textContent = 'Video generation timed out. Please try again.';
+              heygenGenerating = false;
+            }
+          })
+          .catch(function(err) {
+            console.error('[HeyGen] Status poll error:', err);
+            if (pollCount < maxPolls) {
+              setTimeout(poll, pollInterval); // retry on network blip
+            }
+          });
+      }
+
+      setTimeout(poll, pollInterval); // first poll after 5s
+    }
+
     // Next button → transition to wave monitor
     nextBtn.addEventListener('click', function() {
       if (!this.disabled) {
         document.getElementById('root').classList.add('screen3');
+
+        // Random coin flip: 0 = match, 1 = no match
+        var coinFlip = Math.floor(Math.random() * 2);
+        pendingIsMatch = (coinFlip === 0);
+        var prompt = pendingIsMatch ? HEYGEN_PROMPT_MATCH : HEYGEN_PROMPT_NO_MATCH;
+        console.log('[BrainCrush] Coin flip:', coinFlip, '| isMatch:', pendingIsMatch);
+
+        // Kick off HeyGen video generation immediately in background
+        startHeygenGeneration(prompt);
+
         // Start wave monitor after transition
         setTimeout(function() {
           waveMonitor.start({
@@ -1212,15 +1380,11 @@
               // Transition to analyzing screen
               document.getElementById('root').classList.add('screen4');
 
-              // Determine result: did signal cross the threshold?
-              var isMatch = (reason === 'trajectory');
-
-              // Wait for "HeyGen video generation" (simulate with timeout for now)
-              // Replace this timeout with actual HeyGen API callback later
-              var HEYGEN_WAIT = 4000; // ms — simulated generation time
-              setTimeout(function() {
-                showResult(isMatch);
-              }, HEYGEN_WAIT);
+              // If HeyGen video is already ready, show result immediately
+              if (heygenVideoReady) {
+                showResult(pendingIsMatch);
+              }
+              // Otherwise, pollHeygenStatus will call showResult when ready
             }
           });
         }, 600);
@@ -1273,63 +1437,62 @@
         sub.textContent = "Your response suggests comfort, not romantic intensity.";
       }
 
-      // TODO: replace placeholder with actual HeyGen video
-      // Example: videoBox.innerHTML = '<video src="heygen-output.mp4" autoplay loop muted></video>';
+      // Show actual HeyGen video if available
+      if (heygenVideoUrl) {
+        videoBox.innerHTML = '<video src="' + heygenVideoUrl + '" autoplay controls style="width:100%;height:100%;object-fit:cover;border-radius:16px;"></video>';
+      } else {
+        videoBox.innerHTML = '<span class="vid-icon">⏳</span><span>video still rendering…</span>';
+      }
 
       document.getElementById('root').classList.add('screen5');
     }
 
-    // Send button → email the heygen video
-    var emailInput = document.getElementById('emailInput');
-    var sendStatus = document.getElementById('sendStatus');
-    var resultSendBtn = document.getElementById('resultSendBtn');
+    // ── Download & Share ─────────────────────────────
+    var downloadBtn = document.getElementById('downloadBtn');
+    var shareStatus = document.getElementById('shareStatus');
 
-    resultSendBtn.addEventListener('click', function() {
-      var email = emailInput.value.trim();
-      if (!email) {
-        emailInput.style.borderColor = 'rgba(255,80,80,0.7)';
-        emailInput.focus();
+    // Download button: set href to video URL
+    downloadBtn.addEventListener('click', function(e) {
+      if (!heygenVideoUrl) {
+        e.preventDefault();
+        shareStatus.textContent = 'Video is still rendering…';
         return;
       }
-
-      var btn = this;
-      btn.disabled = true;
-      btn.textContent = 'Sending...';
-      sendStatus.textContent = '';
-      emailInput.disabled = true;
-
-      // TODO: replace with actual API call to your backend
-      // fetch('/api/send-video', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     email: email,
-      //     videoUrl: heygenVideoUrl
-      //   })
-      // }).then(...)
-
-      // Simulated send for now
-      setTimeout(function() {
-        btn.textContent = 'Sent! ✓';
-        btn.style.background = 'rgba(100, 200, 120, 0.6)';
-        btn.style.boxShadow = '0 4px 24px rgba(100,200,120,0.3)';
-        sendStatus.textContent = 'Video sent to ' + email;
-        console.log('[Result] Video sent to:', email);
-
-        // After a beat, transition to reset screen
-        setTimeout(function() {
-          document.getElementById('root').classList.add('screen6');
-        }, 1200);
-      }, 1500);
+      // Open in new tab for download (cross-origin won't allow direct download attr)
+      e.preventDefault();
+      window.open(heygenVideoUrl, '_blank');
     });
 
-    // Reset border on typing
-    emailInput.addEventListener('input', function() {
-      this.style.borderColor = '';
+    // WhatsApp share
+    document.getElementById('shareWhatsapp').addEventListener('click', function() {
+      if (!heygenVideoUrl) { shareStatus.textContent = 'Video is still rendering…'; return; }
+      var text = encodeURIComponent('Check out this video I made for you! 💕 ' + heygenVideoUrl);
+      window.open('https://wa.me/?text=' + text, '_blank');
+      shareStatus.textContent = 'Opened WhatsApp!';
     });
 
-    // Reset button → go back to landing screen
-    document.getElementById('resetBtn').addEventListener('click', function() {
+    // Facebook Messenger share
+    document.getElementById('shareMessenger').addEventListener('click', function() {
+      if (!heygenVideoUrl) { shareStatus.textContent = 'Video is still rendering…'; return; }
+      var link = encodeURIComponent(heygenVideoUrl);
+      window.open('https://www.facebook.com/dialog/send?link=' + link + '&app_id=0&redirect_uri=' + encodeURIComponent(window.location.href), '_blank');
+      shareStatus.textContent = 'Opened Messenger!';
+    });
+
+    // Copy link
+    document.getElementById('shareCopyLink').addEventListener('click', function() {
+      if (!heygenVideoUrl) { shareStatus.textContent = 'Video is still rendering…'; return; }
+      navigator.clipboard.writeText(heygenVideoUrl).then(function() {
+        shareStatus.textContent = 'Link copied to clipboard!';
+        setTimeout(function() { shareStatus.textContent = ''; }, 3000);
+      }).catch(function() {
+        // Fallback
+        prompt('Copy this link:', heygenVideoUrl);
+      });
+    });
+
+    // Back home button on result screen + Reset button → go back to landing screen
+    function goHome() {
       var root = document.getElementById('root');
 
       // Clear all screen classes
@@ -1350,18 +1513,21 @@
       fileInput.value = '';
       nextBtn.disabled = true;
 
-      resultSendBtn.disabled = false;
-      resultSendBtn.textContent = 'Send it';
-      resultSendBtn.style.background = '';
-      resultSendBtn.style.boxShadow = '';
-      emailInput.value = '';
-      emailInput.disabled = false;
-      sendStatus.textContent = '';
+      if (shareStatus) shareStatus.textContent = '';
 
       if (verdictBlock) verdictBlock.style.display = 'none';
       if (analyzingText) { analyzingText.style.display = ''; analyzingText.textContent = 'Analyzing your brainwaves and evaluating activation levels...'; }
       if (analyzingDots) analyzingDots.style.display = '';
-    });
+
+      // Reset HeyGen state
+      heygenVideoUrl = null;
+      heygenVideoReady = false;
+      heygenGenerating = false;
+      var vbox = document.getElementById('resultVideoBox');
+      if (vbox) vbox.innerHTML = '<span class="vid-icon">📷</span><span>heygen video</span>';
+    }
+    document.getElementById('resetBtn').addEventListener('click', goHome);
+    document.getElementById('backHomeBtn').addEventListener('click', goHome);
 
     /* ═══════════════════════════════════════════════════
      *  WAVE MONITOR — pink-themed attraction rhythm
@@ -1680,7 +1846,7 @@
           smoothedSample = 0;
           var ampEl = document.getElementById('waveAmplitudeValue');
           if (ampEl) ampEl.textContent = '—';
-          connectWebSocket();
+          // connectWebSocket();  // BCI WebSocket commented out — using simulated wave
           running = true;
           lastFrameTime = 0;
           elapsedTime = 0;
