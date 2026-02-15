@@ -1,13 +1,10 @@
 """
-HeyGen text → video. Prompt on homescreen → Gemini generates ~30s script → avatar speaks it → video.
+HeyGen text → video. Prompt on homescreen → OpenAI generates ~30s script → avatar speaks it → video.
 
 Quick Start Option C: https://docs.heygen.com/docs/quick-start
 Auth: X-API-KEY from HeyGen Settings → API. Set HEYGEN_API_KEY in .env.
-
-Added:
-- GEMINI_API_KEY in .env
-- Gemini middle layer to turn {prompt} into a ~30-second monologue script
-- /api/video/generate now does: prompt → Gemini script → HeyGen video
+OpenAI: OPENAI_API_KEY in .env.
+/api/video/generate: prompt → OpenAI script → HeyGen video
 """
 
 import os
@@ -35,64 +32,65 @@ if AVATAR_TYPE not in ("avatar", "talking_photo"):
 
 DEFAULT_VOICE_ID = os.environ.get("HEYGEN_VOICE_ID", "d572b8091a0843c79028a8c0c06d6dc9")
 
-# Gemini (Google AI Studio) API key (keep in .env)
-GEMINI_API_KEY = (os.environ.get("GEMINI_API_KEY") or "").strip()
+# OpenAI API key (keep in .env)
+OPENAI_API_KEY = (os.environ.get("OPENAI_API_KEY") or "").strip()
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 
 def _headers():
     return {"X-API-KEY": API_KEY, "Content-Type": "application/json"}
 
 
-def generate_script_with_gemini(prompt: str) -> str:
+def generate_script_with_openai(prompt: str) -> str:
     """
-    Uses Gemini to create a ~30-second spoken monologue script.
+    Uses OpenAI to create a ~30-second spoken monologue script.
     Returns plain text only.
     """
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY not set in .env")
+    if not OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY not set in .env")
 
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/"
-        "models/gemini-2.0-flash:generateContent"
-        f"?key={GEMINI_API_KEY}"
-    )
-
-    instructions = (
+    system = (
         "Write a natural spoken monologue lasting about 30 seconds "
         "(70–85 words). No emojis, no stage directions, no lists. "
         "Return ONLY the script text."
     )
 
     body = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": f"{instructions}\n\nPrompt: {prompt}"}],
-            }
+        "model": OPENAI_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
         ],
-        "generationConfig": {
-            "temperature": 0.8,
-            "maxOutputTokens": 220,
-        },
+        "temperature": 0.8,
+        "max_tokens": 220,
     }
 
-    r = requests.post(url, json=body, timeout=30)
+    r = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=body,
+        timeout=30,
+    )
 
     if r.status_code != 200:
-        raise RuntimeError(f"Gemini error: {r.text}")
+        try:
+            err = r.json().get("error", {}).get("message", r.text[:300])
+        except Exception:
+            err = r.text[:300]
+        raise RuntimeError(f"OpenAI error: {err}")
 
     data = r.json()
 
     try:
-        text = "".join(
-            p.get("text", "")
-            for p in data["candidates"][0]["content"]["parts"]
-        ).strip()
+        text = data["choices"][0]["message"]["content"].strip()
     except Exception:
-        raise RuntimeError("Gemini returned unexpected format")
+        raise RuntimeError("OpenAI returned unexpected format")
 
     if not text:
-        raise RuntimeError("Gemini returned empty script")
+        raise RuntimeError("OpenAI returned empty script")
 
     return text
 
@@ -246,11 +244,11 @@ def api_generate():
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
 
-    # 1) Gemini generates a ~30-second script
+    # 1) OpenAI generates a ~30-second script
     try:
-        script = generate_script_with_gemini(prompt)
+        script = generate_script_with_openai(prompt)
     except Exception as e:
-        return jsonify({"error": f"Gemini failed: {str(e)}"}), 500
+        return jsonify({"error": f"Script generation failed: {str(e)}"}), 500
 
     # 2) HeyGen renders the video using the generated script
     avatar_id = (body.get("avatar_id") or AVATAR_ID).strip()

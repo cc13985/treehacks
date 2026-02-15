@@ -92,23 +92,46 @@
     }
     .video-wrap.visible { display: block; }
     .video-wrap video { width: 100%; display: block; }
+    .script-box {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: none;
+    }
+    .script-box.visible { display: block; }
+    .script-box label { margin-bottom: 0.35rem; color: var(--muted); font-size: 0.8rem; }
+    .script-box pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Text → Video</h1>
-    <p class="subtitle">Enter what you want the avatar to talk about. HeyGen turns it into a video.</p>
+    <h1>Prompt → Script → Video</h1>
+    <p class="subtitle">Enter a topic or idea. OpenAI writes a ~30s script, then your avatar speaks it.</p>
 
     <label for="prompt">What should the avatar talk about?</label>
     <textarea
       id="prompt"
-      placeholder="e.g. A 30-second intro to our product launch: we're shipping three new features this quarter..."
+      placeholder="e.g. Introduce our new AI-powered fitness app and highlight the three key features..."
       autofocus
     ></textarea>
 
     <button type="button" class="btn" id="btn">Generate video</button>
     <p class="status" id="status"></p>
     <p class="error-msg" id="error"></p>
+    <div class="script-box" id="scriptBox">
+      <label>Generated script</label>
+      <pre id="scriptText"></pre>
+    </div>
     <div class="video-wrap" id="videoWrap">
       <video id="videoEl" controls playsinline></video>
     </div>
@@ -119,6 +142,8 @@
     const btn = document.getElementById('btn');
     const statusEl = document.getElementById('status');
     const errorEl = document.getElementById('error');
+    const scriptBox = document.getElementById('scriptBox');
+    const scriptText = document.getElementById('scriptText');
     const videoWrap = document.getElementById('videoWrap');
     const videoEl = document.getElementById('videoEl');
 
@@ -136,13 +161,14 @@
       showError('');
       showStatus('', false);
       videoWrap.classList.remove('visible');
+      scriptBox.classList.remove('visible');
       if (!prompt) {
         showError('Please enter what the avatar should talk about.');
         return;
       }
 
       btn.disabled = true;
-      showStatus('Starting…', true);
+      showStatus('Writing script with OpenAI…', true);
 
       try {
         const res = await fetch('/api/video/generate', {
@@ -157,6 +183,13 @@
           showStatus('', false);
           return;
         }
+
+        // Show the Gemini-generated script
+        if (data.script) {
+          scriptText.textContent = data.script;
+          scriptBox.classList.add('visible');
+        }
+
         const videoId = data.video_id;
         if (!videoId) {
           showError('No video ID returned.');
@@ -165,7 +198,7 @@
           return;
         }
 
-        showStatus('Generating video… This may take a minute.', true);
+        showStatus('Script ready. Generating video… This may take a minute.', true);
         const maxAttempts = 120;
         let attempts = 0;
         const interval = setInterval(async () => {
