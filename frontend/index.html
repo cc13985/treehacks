@@ -1214,15 +1214,11 @@
     var fileUploaded = false;
 
     function updateNextBtn() {
-      // BCI requirement commented out — only need file upload now
-      // var ready = bciToggle.classList.contains('on') && fileUploaded;
-      var ready = fileUploaded;
+      var ready = bciToggle.classList.contains('on') && fileUploaded;
       nextBtn.disabled = !ready;
     }
 
-    // BCI connection commented out — no BCI hardware required
-    // To re-enable, uncomment this block:
-    /*
+    // BCI connection: drive toggle from real WebSocket to Node-RED (ws://localhost:1880/bci)
     (function() {
       var BCI_WS_URL = 'ws://localhost:1880/bci';
       var reconnectDelay = 3000;
@@ -1276,13 +1272,6 @@
 
       connect();
       window.bciReconnect = function() { clearTimeout(reconnectTimer); connect(); };
-    })();
-    */
-    // Show BCI as "skipped" in the UI
-    (function() {
-      var bciStatus = document.getElementById('bciStatus');
-      if (bciStatus) bciStatus.textContent = 'skipped';
-      bciToggle.classList.add('on');
     })();
 
     // Click upload box → open file picker
